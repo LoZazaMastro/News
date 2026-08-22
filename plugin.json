@@ -1,0 +1,15 @@
+{
+  "name": "News",
+  "author": "LoZazaMastro",
+  "api_version": 1,
+  "flags": [],
+  "publish": {
+    "tags": [
+      "news",
+      "rss",
+      "media"
+    ],
+    "description": "A controller-first news reader for Decky with a quick QAM feed, customizable sources and a fullscreen magazine-style Edicola.",
+    "image": ""
+  }
+}

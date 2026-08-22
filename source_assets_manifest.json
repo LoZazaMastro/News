@@ -1,0 +1,490 @@
+[
+  {
+    "country": "IT",
+    "name": "ANSA",
+    "site_url": "https://www.ansa.it/",
+    "feed_url": "https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml",
+    "favicon_url": "https://a.favicon.im/ansa.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/ansa-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Il Post",
+    "site_url": "https://www.ilpost.it/",
+    "feed_url": "https://www.ilpost.it/feed/",
+    "favicon_url": "https://a.favicon.im/ilpost.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/ilpost-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "RaiNews",
+    "site_url": "https://www.rainews.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Arainews.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/rainews.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/rainews-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Sky TG24",
+    "site_url": "https://tg24.sky.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Atg24.sky.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/tg24.sky.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/tg24-sky-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Corriere della Sera",
+    "site_url": "https://www.corriere.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Acorriere.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/corriere.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/corriere-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "la Repubblica",
+    "site_url": "https://www.repubblica.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Arepubblica.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/repubblica.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/repubblica-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Il Sole 24 Ore",
+    "site_url": "https://www.ilsole24ore.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Ailsole24ore.com&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/ilsole24ore.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/ilsole24ore-com.png"
+  },
+  {
+    "country": "IT",
+    "name": "DDay.it",
+    "site_url": "https://www.dday.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Adday.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/dday.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/dday-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Tom's Hardware Italia",
+    "site_url": "https://www.tomshw.it/",
+    "feed_url": "https://www.tomshw.it/feed/no-offerte",
+    "favicon_url": "https://a.favicon.im/tomshw.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/tomshw-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Multiplayer.it",
+    "site_url": "https://multiplayer.it/",
+    "feed_url": "https://multiplayer.it/feed/rss/homepage/",
+    "favicon_url": "https://a.favicon.im/multiplayer.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/multiplayer-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "SpazioGames",
+    "site_url": "https://www.spaziogames.it/",
+    "feed_url": "https://www.spaziogames.it/feed",
+    "favicon_url": "https://a.favicon.im/spaziogames.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/spaziogames-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Everyeye.it",
+    "site_url": "https://www.everyeye.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Aeveryeye.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/everyeye.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/everyeye-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "IGN Italia",
+    "site_url": "https://it.ign.com/",
+    "feed_url": "https://it.ign.com/feed.xml",
+    "favicon_url": "https://a.favicon.im/ign.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/ign-com.png"
+  },
+  {
+    "country": "IT",
+    "name": "BadTaste",
+    "site_url": "https://www.badtaste.it/",
+    "feed_url": "https://www.badtaste.it/feed",
+    "favicon_url": "https://a.favicon.im/badtaste.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/badtaste-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Rolling Stone Italia",
+    "site_url": "https://www.rollingstone.it/",
+    "feed_url": "https://www.rollingstone.it/feed/",
+    "favicon_url": "https://a.favicon.im/rollingstone.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/rollingstone-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Rockol",
+    "site_url": "https://www.rockol.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Arockol.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/rockol.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/rockol-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "ComingSoon.it",
+    "site_url": "https://www.comingsoon.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Acomingsoon.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/comingsoon.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/comingsoon-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "MYmovies",
+    "site_url": "https://www.mymovies.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Amymovies.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/mymovies.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/mymovies-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Fumettologica",
+    "site_url": "https://fumettologica.it/",
+    "feed_url": "https://fumettologica.it/feed/",
+    "favicon_url": "https://a.favicon.im/fumettologica.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/fumettologica-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Artribune",
+    "site_url": "https://www.artribune.com/",
+    "feed_url": "https://www.artribune.com/feed/",
+    "favicon_url": "https://a.favicon.im/artribune.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/artribune-com.png"
+  },
+  {
+    "country": "IT",
+    "name": "Dissapore",
+    "site_url": "https://www.dissapore.com/",
+    "feed_url": "https://www.dissapore.com/feed/",
+    "favicon_url": "https://a.favicon.im/dissapore.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/dissapore-com.png"
+  },
+  {
+    "country": "IT",
+    "name": "Gambero Rosso",
+    "site_url": "https://www.gamberorosso.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Agamberorosso.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/gamberorosso.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/gamberorosso-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Lonely Planet Italia",
+    "site_url": "https://www.lonelyplanetitalia.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Alonelyplanetitalia.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/lonelyplanetitalia.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/lonelyplanetitalia-it.png"
+  },
+  {
+    "country": "IT",
+    "name": "Open",
+    "site_url": "https://www.open.online/",
+    "feed_url": "https://www.open.online/feed/",
+    "favicon_url": "https://a.favicon.im/open.online?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/open-online.png"
+  },
+  {
+    "country": "IT",
+    "name": "Fanpage",
+    "site_url": "https://www.fanpage.it/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Afanpage.it&hl=it-IT&gl=IT&ceid=IT%3Ait",
+    "favicon_url": "https://a.favicon.im/fanpage.it?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/fanpage-it.png"
+  },
+  {
+    "country": "US",
+    "name": "Associated Press",
+    "site_url": "https://apnews.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Aapnews.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "favicon_url": "https://a.favicon.im/apnews.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/apnews-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Reuters",
+    "site_url": "https://www.reuters.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Areuters.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "favicon_url": "https://a.favicon.im/reuters.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/reuters-com.png"
+  },
+  {
+    "country": "US",
+    "name": "NPR",
+    "site_url": "https://www.npr.org/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Anpr.org&hl=en-US&gl=US&ceid=US%3Aen",
+    "favicon_url": "https://a.favicon.im/npr.org?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/npr-org.png"
+  },
+  {
+    "country": "US",
+    "name": "The Verge",
+    "site_url": "https://www.theverge.com/",
+    "feed_url": "https://www.theverge.com/rss/index.xml",
+    "favicon_url": "https://a.favicon.im/theverge.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/theverge-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Ars Technica",
+    "site_url": "https://arstechnica.com/",
+    "feed_url": "https://feeds.arstechnica.com/arstechnica/index",
+    "favicon_url": "https://a.favicon.im/arstechnica.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/arstechnica-com.png"
+  },
+  {
+    "country": "US",
+    "name": "IGN",
+    "site_url": "https://www.ign.com/",
+    "feed_url": "https://feeds.feedburner.com/ign/all",
+    "favicon_url": "https://a.favicon.im/ign.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/ign-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Pitchfork",
+    "site_url": "https://pitchfork.com/",
+    "feed_url": "https://pitchfork.com/rss/news/",
+    "favicon_url": "https://a.favicon.im/pitchfork.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/pitchfork-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Variety",
+    "site_url": "https://variety.com/",
+    "feed_url": "https://variety.com/feed/",
+    "favicon_url": "https://a.favicon.im/variety.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/variety-com.png"
+  },
+  {
+    "country": "US",
+    "name": "The Comics Journal",
+    "site_url": "https://www.tcj.com/",
+    "feed_url": "https://www.tcj.com/feed/",
+    "favicon_url": "https://a.favicon.im/tcj.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/tcj-com.png"
+  },
+  {
+    "country": "US",
+    "name": "ARTnews",
+    "site_url": "https://www.artnews.com/",
+    "feed_url": "https://www.artnews.com/feed/",
+    "favicon_url": "https://a.favicon.im/artnews.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/artnews-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Eater",
+    "site_url": "https://www.eater.com/",
+    "feed_url": "https://www.eater.com/rss/index.xml",
+    "favicon_url": "https://a.favicon.im/eater.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/eater-com.png"
+  },
+  {
+    "country": "US",
+    "name": "Lonely Planet",
+    "site_url": "https://www.lonelyplanet.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Alonelyplanet.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "favicon_url": "https://a.favicon.im/lonelyplanet.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/lonelyplanet-com.png"
+  },
+  {
+    "country": "GB",
+    "name": "BBC News",
+    "site_url": "https://www.bbc.com/news",
+    "feed_url": "https://feeds.bbci.co.uk/news/rss.xml",
+    "favicon_url": "https://a.favicon.im/bbc.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/bbc-com.png"
+  },
+  {
+    "country": "GB",
+    "name": "The Guardian",
+    "site_url": "https://www.theguardian.com/",
+    "feed_url": "https://www.theguardian.com/international/rss",
+    "favicon_url": "https://a.favicon.im/theguardian.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/theguardian-com.png"
+  },
+  {
+    "country": "GB",
+    "name": "Eurogamer",
+    "site_url": "https://www.eurogamer.net/",
+    "feed_url": "https://www.eurogamer.net/feed",
+    "favicon_url": "https://a.favicon.im/eurogamer.net?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/eurogamer-net.png"
+  },
+  {
+    "country": "GB",
+    "name": "NME",
+    "site_url": "https://www.nme.com/",
+    "feed_url": "https://www.nme.com/feed",
+    "favicon_url": "https://a.favicon.im/nme.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/nme-com.png"
+  },
+  {
+    "country": "GB",
+    "name": "Empire",
+    "site_url": "https://www.empireonline.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Aempireonline.com&hl=en-GB&gl=GB&ceid=GB%3Aen",
+    "favicon_url": "https://a.favicon.im/empireonline.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/empireonline-com.png"
+  },
+  {
+    "country": "FR",
+    "name": "Le Monde",
+    "site_url": "https://www.lemonde.fr/",
+    "feed_url": "https://www.lemonde.fr/rss/une.xml",
+    "favicon_url": "https://a.favicon.im/lemonde.fr?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/lemonde-fr.png"
+  },
+  {
+    "country": "FR",
+    "name": "Franceinfo",
+    "site_url": "https://www.franceinfo.fr/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Afranceinfo.fr&hl=fr-FR&gl=FR&ceid=FR%3Afr",
+    "favicon_url": "https://a.favicon.im/franceinfo.fr?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/franceinfo-fr.png"
+  },
+  {
+    "country": "FR",
+    "name": "Numerama",
+    "site_url": "https://www.numerama.com/",
+    "feed_url": "https://www.numerama.com/feed/",
+    "favicon_url": "https://a.favicon.im/numerama.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/numerama-com.png"
+  },
+  {
+    "country": "FR",
+    "name": "Les Inrockuptibles",
+    "site_url": "https://www.lesinrocks.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Alesinrocks.com&hl=fr-FR&gl=FR&ceid=FR%3Afr",
+    "favicon_url": "https://a.favicon.im/lesinrocks.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/lesinrocks-com.png"
+  },
+  {
+    "country": "DE",
+    "name": "Tagesschau",
+    "site_url": "https://www.tagesschau.de/",
+    "feed_url": "https://www.tagesschau.de/index~rss2.xml",
+    "favicon_url": "https://a.favicon.im/tagesschau.de?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/tagesschau-de.png"
+  },
+  {
+    "country": "DE",
+    "name": "Der Spiegel",
+    "site_url": "https://www.spiegel.de/",
+    "feed_url": "https://www.spiegel.de/schlagzeilen/index.rss",
+    "favicon_url": "https://a.favicon.im/spiegel.de?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/spiegel-de.png"
+  },
+  {
+    "country": "DE",
+    "name": "Heise",
+    "site_url": "https://www.heise.de/",
+    "feed_url": "https://www.heise.de/rss/heise-atom.xml",
+    "favicon_url": "https://a.favicon.im/heise.de?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/heise-de.png"
+  },
+  {
+    "country": "DE",
+    "name": "GameStar",
+    "site_url": "https://www.gamestar.de/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Agamestar.de&hl=de-DE&gl=DE&ceid=DE%3Ade",
+    "favicon_url": "https://a.favicon.im/gamestar.de?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/gamestar-de.png"
+  },
+  {
+    "country": "ES",
+    "name": "El País",
+    "site_url": "https://elpais.com/",
+    "feed_url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
+    "favicon_url": "https://a.favicon.im/elpais.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/elpais-com.png"
+  },
+  {
+    "country": "ES",
+    "name": "RTVE Noticias",
+    "site_url": "https://www.rtve.es/noticias/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Artve.es&hl=es-ES&gl=ES&ceid=ES%3Aes",
+    "favicon_url": "https://a.favicon.im/rtve.es?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/rtve-es.png"
+  },
+  {
+    "country": "ES",
+    "name": "Xataka",
+    "site_url": "https://www.xataka.com/",
+    "feed_url": "https://www.xataka.com/index.xml",
+    "favicon_url": "https://a.favicon.im/xataka.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/xataka-com.png"
+  },
+  {
+    "country": "ES",
+    "name": "3DJuegos",
+    "site_url": "https://www.3djuegos.com/",
+    "feed_url": "https://www.3djuegos.com/feed",
+    "favicon_url": "https://a.favicon.im/3djuegos.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/3djuegos-com.png"
+  },
+  {
+    "country": "JP",
+    "name": "NHK",
+    "site_url": "https://www3.nhk.or.jp/news/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Awww3.nhk.or.jp&hl=ja-JP&gl=JP&ceid=JP%3Aja",
+    "favicon_url": "https://a.favicon.im/www3.nhk.or.jp?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/www3-nhk-or-jp.png"
+  },
+  {
+    "country": "JP",
+    "name": "The Japan Times",
+    "site_url": "https://www.japantimes.co.jp/",
+    "feed_url": "https://www.japantimes.co.jp/feed/",
+    "favicon_url": "https://a.favicon.im/japantimes.co.jp?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/japantimes-co-jp.png"
+  },
+  {
+    "country": "JP",
+    "name": "4Gamer",
+    "site_url": "https://www.4gamer.net/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3A4gamer.net&hl=ja-JP&gl=JP&ceid=JP%3Aja",
+    "favicon_url": "https://a.favicon.im/4gamer.net?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/4gamer-net.png"
+  },
+  {
+    "country": "CA",
+    "name": "CBC News",
+    "site_url": "https://www.cbc.ca/news",
+    "feed_url": "https://www.cbc.ca/cmlink/rss-topstories",
+    "favicon_url": "https://a.favicon.im/cbc.ca?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/cbc-ca.png"
+  },
+  {
+    "country": "CA",
+    "name": "The Globe and Mail",
+    "site_url": "https://www.theglobeandmail.com/",
+    "feed_url": "https://news.google.com/rss/search?q=site%3Atheglobeandmail.com&hl=en-CA&gl=CA&ceid=CA%3Aen",
+    "favicon_url": "https://a.favicon.im/theglobeandmail.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/theglobeandmail-com.png"
+  },
+  {
+    "country": "AU",
+    "name": "ABC News Australia",
+    "site_url": "https://www.abc.net.au/news/",
+    "feed_url": "https://www.abc.net.au/news/feed/51120/rss.xml",
+    "favicon_url": "https://a.favicon.im/abc.net.au?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/abc-net-au.png"
+  },
+  {
+    "country": "AU",
+    "name": "The Conversation Australia",
+    "site_url": "https://theconversation.com/au",
+    "feed_url": "https://theconversation.com/au/articles.atom",
+    "favicon_url": "https://a.favicon.im/theconversation.com?larger=true&throw-error-on-404=true",
+    "logo_url": "asset://favicons/theconversation-com.png"
+  }
+]

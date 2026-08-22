@@ -1,0 +1,647 @@
+NEWS 1.0.0 — AUDIT COMPLETO FONTI PREDEFINITE
+Data: 2026-08-18
+Autore plugin: LoZazaMastro
+
+IMPORTANTE: questo audit copre TUTTE le fonti presenti nel catalogo predefinito. Lo stato web indica cosa ha restituito il crawler web durante la verifica pubblica e NON equivale a una garanzia che un sito anti-bot/paywall risponda identicamente al runtime Python di Decky. Per questo la build usa più livelli: feed diretto quando disponibile, Google News site RSS, resolver URL originale, parsing HTML/JSON-LD/script/AMP, feedContent e rendered reader fallback.
+
+==============================================================================
+IT — 25 fonti
+==============================================================================
+01. ANSA
+    Sito: https://www.ansa.it/
+    Feed: https://www.ansa.it/sito/notizie/topnews/topnews_rss.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/ansa.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/ansa.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. Il Post
+    Sito: https://www.ilpost.it/
+    Feed: https://www.ilpost.it/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/ilpost.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/ilpost.it?larger=true&throw-error-on-404=true
+    Audit web: web audit non fetchabile direttamente; articoli pubblici indicizzati, pipeline usa feed diretto + reader/rendered fallback
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. RaiNews
+    Sito: https://www.rainews.it/
+    Feed: https://news.google.com/rss/search?q=site%3Arainews.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/rainews.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/rainews.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. Sky TG24
+    Sito: https://tg24.sky.it/
+    Feed: https://news.google.com/rss/search?q=site%3Atg24.sky.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/tg24.sky.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/tg24.sky.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+05. Corriere della Sera
+    Sito: https://www.corriere.it/
+    Feed: https://news.google.com/rss/search?q=site%3Acorriere.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/corriere.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/corriere.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+06. la Repubblica
+    Sito: https://www.repubblica.it/
+    Feed: https://news.google.com/rss/search?q=site%3Arepubblica.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/repubblica.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/repubblica.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+07. Il Sole 24 Ore
+    Sito: https://www.ilsole24ore.com/
+    Feed: https://news.google.com/rss/search?q=site%3Ailsole24ore.com&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/ilsole24ore.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/ilsole24ore.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto ha restituito errore; pipeline usa Google News + resolver + reader fallback
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+08. DDay.it
+    Sito: https://www.dday.it/
+    Feed: https://news.google.com/rss/search?q=site%3Adday.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/dday.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/dday.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+09. Tom's Hardware Italia
+    Sito: https://www.tomshw.it/
+    Feed: https://www.tomshw.it/feed/no-offerte
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/tomshw.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/tomshw.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+10. Multiplayer.it
+    Sito: https://multiplayer.it/
+    Feed: https://multiplayer.it/feed/rss/homepage/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/multiplayer.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/multiplayer.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+11. SpazioGames
+    Sito: https://www.spaziogames.it/
+    Feed: https://www.spaziogames.it/feed
+    Strategia feed: RSS nativo publisher; fallback Google News solo se il feed nativo fallisce
+    Favicon: https://a.favicon.im/spaziogames.it?larger=true&throw-error-on-404=true
+    Logo: asset://favicons/spaziogames-it.png
+    Audit web: il sito espone un link RSS ufficiale; build 2026-08-20 usa il feed nativo per URL e cover più affidabili
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+12. Everyeye.it
+    Sito: https://www.everyeye.it/
+    Feed: https://news.google.com/rss/search?q=site%3Aeveryeye.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/everyeye.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/everyeye.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+13. IGN Italia
+    Sito: https://it.ign.com/
+    Feed: https://it.ign.com/feed.xml
+    Strategia feed: RSS nativo publisher; fallback Google News solo se il feed nativo fallisce
+    Favicon: https://a.favicon.im/ign.com?larger=true&throw-error-on-404=true
+    Logo: asset://favicons/ign-com.png
+    Audit web: feed nativo noto come it.ign.com/feed.xml; card CDN IGN mantenute a ~960px invece di espandere ogni cover all'originale
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+14. BadTaste
+    Sito: https://www.badtaste.it/
+    Feed: https://www.badtaste.it/feed
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/badtaste.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/badtaste.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+15. Rolling Stone Italia
+    Sito: https://www.rollingstone.it/
+    Feed: https://www.rollingstone.it/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/rollingstone.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/rollingstone.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+16. Rockol
+    Sito: https://www.rockol.it/
+    Feed: https://news.google.com/rss/search?q=site%3Arockol.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/rockol.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/rockol.it?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; pipeline usa Google News + resolver
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+17. ComingSoon.it
+    Sito: https://www.comingsoon.it/
+    Feed: https://news.google.com/rss/search?q=site%3Acomingsoon.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/comingsoon.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/comingsoon.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+18. MYmovies
+    Sito: https://www.mymovies.it/
+    Feed: https://news.google.com/rss/search?q=site%3Amymovies.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/mymovies.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/mymovies.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+19. Fumettologica
+    Sito: https://fumettologica.it/
+    Feed: https://fumettologica.it/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/fumettologica.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/fumettologica.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+20. Artribune
+    Sito: https://www.artribune.com/
+    Feed: https://www.artribune.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/artribune.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/artribune.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+21. Dissapore
+    Sito: https://www.dissapore.com/
+    Feed: https://www.dissapore.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/dissapore.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/dissapore.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+22. Gambero Rosso
+    Sito: https://www.gamberorosso.it/
+    Feed: https://news.google.com/rss/search?q=site%3Agamberorosso.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/gamberorosso.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/gamberorosso.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+23. Lonely Planet Italia
+    Sito: https://www.lonelyplanetitalia.it/
+    Feed: https://news.google.com/rss/search?q=site%3Alonelyplanetitalia.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/lonelyplanetitalia.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/lonelyplanetitalia.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+24. Open
+    Sito: https://www.open.online/
+    Feed: https://www.open.online/feed/
+    Strategia feed: RSS nativo publisher (Google News solo fallback runtime)
+    Favicon: https://a.favicon.im/open.online?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/open.online?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+25. Fanpage
+    Sito: https://www.fanpage.it/
+    Feed: https://news.google.com/rss/search?q=site%3Afanpage.it&hl=it-IT&gl=IT&ceid=IT%3Ait
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/fanpage.it?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/fanpage.it?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+US — 12 fonti
+==============================================================================
+01. Associated Press
+    Sito: https://apnews.com/
+    Feed: https://news.google.com/rss/search?q=site%3Aapnews.com&hl=en-US&gl=US&ceid=US%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/apnews.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/apnews.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. Reuters
+    Sito: https://www.reuters.com/
+    Feed: https://news.google.com/rss/search?q=site%3Areuters.com&hl=en-US&gl=US&ceid=US%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/reuters.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/reuters.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. NPR
+    Sito: https://www.npr.org/
+    Feed: https://news.google.com/rss/search?q=site%3Anpr.org&hl=en-US&gl=US&ceid=US%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/npr.org?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/npr.org?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. The Verge
+    Sito: https://www.theverge.com/
+    Feed: https://www.theverge.com/rss/index.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/theverge.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/theverge.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+05. Ars Technica
+    Sito: https://arstechnica.com/
+    Feed: https://feeds.arstechnica.com/arstechnica/index
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/arstechnica.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/arstechnica.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+06. IGN
+    Sito: https://www.ign.com/
+    Feed: https://feeds.feedburner.com/ign/all
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/ign.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/ign.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+07. Pitchfork
+    Sito: https://pitchfork.com/
+    Feed: https://pitchfork.com/rss/news/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/pitchfork.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/pitchfork.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+08. Variety
+    Sito: https://variety.com/
+    Feed: https://variety.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/variety.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/variety.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+09. The Comics Journal
+    Sito: https://www.tcj.com/
+    Feed: https://www.tcj.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/tcj.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/tcj.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+10. ARTnews
+    Sito: https://www.artnews.com/
+    Feed: https://www.artnews.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/artnews.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/artnews.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+11. Eater
+    Sito: https://www.eater.com/
+    Feed: https://www.eater.com/rss/index.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/eater.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/eater.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+12. Lonely Planet
+    Sito: https://www.lonelyplanet.com/
+    Feed: https://news.google.com/rss/search?q=site%3Alonelyplanet.com&hl=en-US&gl=US&ceid=US%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/lonelyplanet.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/lonelyplanet.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+GB — 5 fonti
+==============================================================================
+01. BBC News
+    Sito: https://www.bbc.com/news
+    Feed: https://feeds.bbci.co.uk/news/rss.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/bbc.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/bbc.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. The Guardian
+    Sito: https://www.theguardian.com/
+    Feed: https://www.theguardian.com/international/rss
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/theguardian.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/theguardian.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. Eurogamer
+    Sito: https://www.eurogamer.net/
+    Feed: https://www.eurogamer.net/feed
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/eurogamer.net?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/eurogamer.net?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. NME
+    Sito: https://www.nme.com/
+    Feed: https://www.nme.com/feed
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/nme.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/nme.com?larger=true&throw-error-on-404=true
+    Audit web: homepage/crawler ha risposto 403; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+05. Empire
+    Sito: https://www.empireonline.com/
+    Feed: https://news.google.com/rss/search?q=site%3Aempireonline.com&hl=en-GB&gl=GB&ceid=GB%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/empireonline.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/empireonline.com?larger=true&throw-error-on-404=true
+    Audit web: crawler bloccato da robots; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+FR — 4 fonti
+==============================================================================
+01. Le Monde
+    Sito: https://www.lemonde.fr/
+    Feed: https://www.lemonde.fr/rss/une.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/lemonde.fr?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/lemonde.fr?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. Franceinfo
+    Sito: https://www.franceinfo.fr/
+    Feed: https://news.google.com/rss/search?q=site%3Afranceinfo.fr&hl=fr-FR&gl=FR&ceid=FR%3Afr
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/franceinfo.fr?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/franceinfo.fr?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. Numerama
+    Sito: https://www.numerama.com/
+    Feed: https://www.numerama.com/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/numerama.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/numerama.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. Les Inrockuptibles
+    Sito: https://www.lesinrocks.com/
+    Feed: https://news.google.com/rss/search?q=site%3Alesinrocks.com&hl=fr-FR&gl=FR&ceid=FR%3Afr
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/lesinrocks.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/lesinrocks.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+DE — 4 fonti
+==============================================================================
+01. Tagesschau
+    Sito: https://www.tagesschau.de/
+    Feed: https://www.tagesschau.de/index~rss2.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/tagesschau.de?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/tagesschau.de?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. Der Spiegel
+    Sito: https://www.spiegel.de/
+    Feed: https://www.spiegel.de/schlagzeilen/index.rss
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/spiegel.de?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/spiegel.de?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. Heise
+    Sito: https://www.heise.de/
+    Feed: https://www.heise.de/rss/heise-atom.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/heise.de?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/heise.de?larger=true&throw-error-on-404=true
+    Audit web: homepage audit rediretto da protezione/crawler; feed Atom diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. GameStar
+    Sito: https://www.gamestar.de/
+    Feed: https://news.google.com/rss/search?q=site%3Agamestar.de&hl=de-DE&gl=DE&ceid=DE%3Ade
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/gamestar.de?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/gamestar.de?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+ES — 4 fonti
+==============================================================================
+01. El País
+    Sito: https://elpais.com/
+    Feed: https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/elpais.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/elpais.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. RTVE Noticias
+    Sito: https://www.rtve.es/noticias/
+    Feed: https://news.google.com/rss/search?q=site%3Artve.es&hl=es-ES&gl=ES&ceid=ES%3Aes
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/rtve.es?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/rtve.es?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. Xataka
+    Sito: https://www.xataka.com/
+    Feed: https://www.xataka.com/index.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/xataka.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/xataka.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+04. 3DJuegos
+    Sito: https://www.3djuegos.com/
+    Feed: https://www.3djuegos.com/feed
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/3djuegos.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/3djuegos.com?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+JP — 3 fonti
+==============================================================================
+01. NHK
+    Sito: https://www3.nhk.or.jp/news/
+    Feed: https://news.google.com/rss/search?q=site%3Awww3.nhk.or.jp&hl=ja-JP&gl=JP&ceid=JP%3Aja
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/www3.nhk.or.jp?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/www3.nhk.or.jp?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. The Japan Times
+    Sito: https://www.japantimes.co.jp/
+    Feed: https://www.japantimes.co.jp/feed/
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/japantimes.co.jp?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/japantimes.co.jp?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+03. 4Gamer
+    Sito: https://www.4gamer.net/
+    Feed: https://news.google.com/rss/search?q=site%3A4gamer.net&hl=ja-JP&gl=JP&ceid=JP%3Aja
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/4gamer.net?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/4gamer.net?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+CA — 2 fonti
+==============================================================================
+01. CBC News
+    Sito: https://www.cbc.ca/news
+    Feed: https://www.cbc.ca/cmlink/rss-topstories
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/cbc.ca?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/cbc.ca?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. The Globe and Mail
+    Sito: https://www.theglobeandmail.com/
+    Feed: https://news.google.com/rss/search?q=site%3Atheglobeandmail.com&hl=en-CA&gl=CA&ceid=CA%3Aen
+    Strategia feed: Google News site RSS
+    Favicon: https://a.favicon.im/theglobeandmail.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/theglobeandmail.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; Google News site feed configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+AU — 2 fonti
+==============================================================================
+01. ABC News Australia
+    Sito: https://www.abc.net.au/news/
+    Feed: https://www.abc.net.au/news/feed/51120/rss.xml
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/abc.net.au?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/abc.net.au?larger=true&throw-error-on-404=true
+    Audit web: homepage leggibile via web audit; feed diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+02. The Conversation Australia
+    Sito: https://theconversation.com/au
+    Feed: https://theconversation.com/au/articles.atom
+    Strategia feed: RSS/Atom diretto
+    Favicon: https://a.favicon.im/theconversation.com?larger=true&throw-error-on-404=true
+    Logo: https://a.favicon.im/theconversation.com?larger=true&throw-error-on-404=true
+    Audit web: web audit diretto non disponibile; feed Atom diretto configurato
+    Reader build: URL publisher -> HTML/JSON-LD/script-state -> feedContent -> AMP -> rendered fallback; Google News prima risolto verso il dominio atteso.
+    Immagini build: cover feed/card -> pagina publisher OG/Twitter/JSON-LD/articolo -> cache locale; reader preferisce immagini originali ad alta qualità.
+
+==============================================================================
+TOTALE VERIFICATO NEL CATALOGO: 61 fonti
+==============================================================================
+Nota: i feed XML non sono sempre renderizzabili dal browser/crawler di audit (alcuni rispondono con content-type XML non visualizzato). La presenza del feed nel catalogo è inoltre coperta dagli smoke test offline della build. I publisher che bloccano crawler, impongono login/paywall o cambiano anti-bot possono richiedere ulteriori fix dopo test reali in Decky.

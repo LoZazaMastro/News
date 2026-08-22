@@ -1,0 +1,26 @@
+{
+  "name": "decky-news",
+  "version": "1.0.0",
+  "description": "A gamepad-first news reader and fullscreen Edicola for Decky Loader.",
+  "author": "LoZazaMastro",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && rollup -c",
+    "build:standalone": "node scripts/build-dist.mjs",
+    "check:python": "python -m py_compile main.py",
+    "verify": "node scripts/validate-translations.mjs && python -m py_compile main.py && node --check dist/index.js",
+    "validate:translations": "node scripts/validate-translations.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@decky/api": "^1.1.3",
+    "@decky/ui": "^4.11.0"
+  },
+  "devDependencies": {
+    "@decky/rollup": "^1.0.2",
+    "@types/react": "19.1.1",
+    "@types/react-dom": "19.1.1",
+    "rollup": "^4.53.3",
+    "typescript": "^5.6.2"
+  }
+}
