@@ -2,60 +2,60 @@
 
 # News
 
-### Le notizie diventano un'Edicola da sfogliare con il controller.
+### News becomes a Newsstand to browse with your controller.
 
-Titoli rapidi nel QAM e un lettore a schermo intero che trasforma fonti RSS, siti e canali in un magazine personale per Steam Big Picture.
+Quick headlines in the QAM and a full-screen reader that transforms RSS feeds, websites, and channels into a personal magazine for Steam Big Picture.
 
 [![Release](https://img.shields.io/github/v/release/LoZazaMastro/News?style=for-the-badge&label=Release&labelColor=111111&color=ffffff)](https://github.com/LoZazaMastro/News/releases/latest)
 [![Licenza MIT](https://img.shields.io/badge/Licenza-MIT-ffffff?style=for-the-badge&labelColor=111111)](LICENSE)
 
 </div>
 
-## Informazione, senza uscire da Gaming Mode
+## Information, without leaving Gaming Mode
 
-News usa il menu rapido per gli aggiornamenti immediati e una **Edicola** a schermo intero per la lettura. Il layout cambia in base ai contenuti, come una rivista, e ogni elemento resta raggiungibile tramite la navigazione nativa di Decky.
+News utilizes the quick access menu for instant updates and a full-screen **Newsstand** for reading. The layout adapts dynamically based on content, resembling a magazine, and every element remains fully accessible through Decky's native navigation.
 
-- titoli recenti direttamente nel QAM;
-- Edicola full-screen con layout dinamico e navigazione a quattro direzioni;
-- tab dedicate a politica, sport, videogiochi, musica, cinema, fumetti, arte, viaggi, cucina o categorie personali;
-- fonti differenti per ogni tab, mescolabili anche fra più Paesi;
-- categorie rinominabili, riordinabili, disattivabili o eliminabili;
-- catalogo iniziale per Paese, ricerca online degli editori e aggiunta manuale di siti o feed RSS/Atom;
-- Reader che estrae testo e immagini pubblici quando possibile;
-- schede video e contenuti incorporati supportati per YouTube e alcuni link social;
-- cache locale e intervallo di aggiornamento configurabile;
-- nessuna chiave API richiesta per le normali fonti RSS/Atom.
+- recent headlines directly inside the QAM;
+- full-screen Newsstand with dynamic layouts and 4-way direction navigation;
+- dedicated tabs for politics, sports, video games, music, cinema, comics, art, travel, cooking, or personal categories;
+- different sources for each tab, with the ability to mix multiple countries;
+- renameable, reorderable, toggleable, or deleteable categories;
+- initial catalog by country, online publisher search, and manual addition of websites or RSS/Atom feeds;
+- Reader mode that extracts public text and images whenever possible;
+- supported video cards and embedded content for YouTube and select social links;
+- local cache and configurable update intervals;
+- no API keys required for standard RSS/Atom sources.
 
-La classificazione avviene sul singolo articolo: una pubblicazione generalista può alimentare contemporaneamente più sezioni senza essere forzata in un'unica categoria.
+Classification occurs on a per-article basis: a general publication can feed multiple sections simultaneously without being forced into a single category.
 
-## Primo avvio
+## First startup
 
-L'onboarding guida nella scelta di:
+The onboarding process guides you through choosing your:
 
-1. Paese;
-2. fonti;
-3. tab e categorie dell'Edicola;
-4. riepilogo finale.
+1. country;
+2. sources;
+3. Newsstand tabs and categories;
+4. final summary.
 
-Puoi ripeterlo dalle impostazioni. La configurazione esistente resta attiva finché il nuovo percorso non viene completato e confermato.
+You can rerun it anytime from the settings. Your existing configuration remains active until the new setup process is fully completed and confirmed.
 
-## Fonti e modalità Reader
+## Sources and Reader Mode
 
-Puoi incollare la home page di una testata, un feed RSS/Atom diretto oppure un canale YouTube riconoscibile. Se un sito non espone feed pubblici, blocca l'accesso automatico o non offre un articolo estraibile, News mantiene anteprima e collegamento **Apri sul sito**: non aggira paywall o limitazioni della fonte.
+You can paste the home page of a news outlet, a direct RSS/Atom feed, or a recognized YouTube channel. If a website does not expose public feeds, blocks automatic access, or does not provide an extractable article, News retains the preview and an **Open on website** link: it does not bypass paywalls or source restrictions.
 
-Le immagini vengono cercate nella pagina, nei dati strutturati e nel corpo dell'articolo, scartando icone, avatar e loghi troppo piccoli. Gli asset risolti vengono memorizzati in locale per evitare richieste e caricamenti ripetuti durante la navigazione.
+Images are crawled from the page, structured data, and the article body, discarding icons, avatars, and logos that are too small. Resolved assets are cached locally to avoid repeated requests and loading times during navigation.
 
-## Lingue
+## Languages
 
-News segue automaticamente la lingua di Steam. Sono incluse traduzioni per italiano, inglese, spagnolo, francese, tedesco, portoghese brasiliano, russo, giapponese e cinese semplificato; le lingue non disponibili usano l'inglese.
+News automatically follows Steam's interface language. Translations are included for Italian, English, Spanish, French, German, Brazilian Portuguese, Russian, Japanese, and Simplified Chinese; unavailable languages default to English.
 
-## Installazione
+## Installation
 
-Puoi installare e aggiornare News dal Plugin Store di [Playhub](https://github.com/LoZazaMastro/Playhub), oppure scaricare lo ZIP dall'[ultima release](https://github.com/LoZazaMastro/News/releases/latest) e installarlo da **Decky → Impostazioni → Sviluppatore → Installa plugin da ZIP**.
+You can install and update News from the [Playhub](https://github.com/LoZazaMastro/Playhub) Plugin Store, or download the ZIP from the [latest release](https://github.com/LoZazaMastro/News/releases/latest) and install it via **Decky → Settings → Developer → Install plugin from ZIP**.
 
-Il core non dipende da helper esclusivi di Windows ed è progettato per funzionare anche sulle installazioni Linux supportate da Decky.
+The core does not rely on Windows-exclusive helpers and is designed to work on Linux installations supported by Decky as well.
 
-## Sviluppo
+## Development
 
 ```bash
 npm install
@@ -64,14 +64,14 @@ npm run build
 python -m py_compile main.py
 ```
 
-Il frontend e le traduzioni sono in `src/`; scoperta delle fonti, download, Reader e cache sono gestiti da `main.py`.
+The frontend and translations are located in `src/`; source discovery, downloading, Reader mode, and caching are managed by `main.py`.
 
-## Licenza
+## License
 
-News è distribuito con licenza [MIT](LICENSE). I contenuti visualizzati restano di proprietà delle rispettive fonti.
+News is distributed under the [MIT](LICENSE) license. Displayed content remains the property of its respective sources.
 
 <div align="center">
 
-Creato e mantenuto da **[LoZazaMastro](https://github.com/LoZazaMastro)**.
+Created and maintained by **[LoZazaMastro](https://github.com/LoZazaMastro)**.
 
 </div>
