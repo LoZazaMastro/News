@@ -1,77 +1,113 @@
-<div align="center">
-
 # News
 
-### Le notizie diventano un'Edicola da sfogliare con il controller.
+**News** is a Decky Loader plugin by **LoZazaMastro** that turns the Quick Access Menu into a fast news feed and adds a fullscreen, gamepad-first **Edicola** for reading news like a living magazine.
 
-Titoli rapidi nel QAM e un lettore a schermo intero che trasforma fonti RSS, siti e canali in un magazine personale per Steam Big Picture.
+## What it does
 
-[![Release](https://img.shields.io/github/v/release/LoZazaMastro/News?style=for-the-badge&label=Release&labelColor=111111&color=ffffff)](https://github.com/LoZazaMastro/News/releases/latest)
-[![Licenza MIT](https://img.shields.io/badge/Licenza-MIT-ffffff?style=for-the-badge&labelColor=111111)](LICENSE)
+- Quick headlines directly in the **QAM**.
+- Fullscreen **Edicola** with a dynamic magazine layout instead of a uniform grid.
+- Full 4-way controller navigation through Decky focusable components.
+- Custom tabs such as Politics, Sport, Games, Music, Cinema, Comics, Art, Travel, Food, or any user-defined category.
+- Article-level categorization: a general publication can contribute different stories to Politics, Sport, Technology, Games, Cinema and the other sections.
+- Different sources can be assigned to each tab.
+- Built-in source catalog by country plus online publisher discovery, country-wide headline feeds and manual RSS/Atom/site discovery.
+- Sources from multiple countries can be mixed freely; country selection uses a controller-friendly picker.
+- Category tabs can be renamed, reordered, disabled or deleted.
+- First-run onboarding for country, sources and initial tabs.
+- Reader view that extracts article text and images without opening a desktop browser when possible.
+- Article artwork is filtered to reject tiny icons, avatars, logos and social-media graphics; missing artwork is enriched in the background when possible.
+- Video cards, gamepad-focusable YouTube playback, and embedded social previews for supported X, Instagram and TikTok links found inside articles.
+- Cached feeds with a configurable refresh interval.
+- No API key is required for normal RSS/Atom sources.
+- Designed without Windows-only helpers so the core plugin can run on Windows and Linux.
 
-</div>
+## First run
 
-## Informazione, senza uscire da Gaming Mode
+The QAM initially shows **Configure News**. The onboarding flow asks for:
 
-News usa il menu rapido per gli aggiornamenti immediati e una **Edicola** a schermo intero per la lettura. Il layout cambia in base ai contenuti, come una rivista, e ogni elemento resta raggiungibile tramite la navigazione nativa di Decky.
+1. Country.
+2. Sources.
+3. Edicola tabs/categories.
+4. Final review.
 
-- titoli recenti direttamente nel QAM;
-- Edicola full-screen con layout dinamico e navigazione a quattro direzioni;
-- tab dedicate a politica, sport, videogiochi, musica, cinema, fumetti, arte, viaggi, cucina o categorie personali;
-- fonti differenti per ogni tab, mescolabili anche fra più Paesi;
-- categorie rinominabili, riordinabili, disattivabili o eliminabili;
-- catalogo iniziale per Paese, ricerca online degli editori e aggiunta manuale di siti o feed RSS/Atom;
-- Reader che estrae testo e immagini pubblici quando possibile;
-- schede video e contenuti incorporati supportati per YouTube e alcuni link social;
-- cache locale e intervallo di aggiornamento configurabile;
-- nessuna chiave API richiesta per le normali fonti RSS/Atom.
+The configuration can later be edited from **News → Settings**. Re-running onboarding does not erase the existing setup until the new configuration is explicitly completed.
 
-La classificazione avviene sul singolo articolo: una pubblicazione generalista può alimentare contemporaneamente più sezioni senza essere forzata in un'unica categoria.
+## Sources
 
-## Primo avvio
+The included catalog is only a convenience layer. The source picker can also search publishers online for the selected country. A source can additionally be added by pasting:
 
-L'onboarding guida nella scelta di:
+- the home page of a publication (News attempts RSS/Atom discovery),
+- a direct RSS/Atom URL,
+- a YouTube channel URL when its channel feed can be identified.
 
-1. Paese;
-2. fonti;
-3. tab e categorie dell'Edicola;
-4. riepilogo finale.
+Some sites do not expose a public feed or block automated page access. In that case News leaves the original site available through **Open on website** rather than attempting to bypass access controls or paywalls.
 
-Puoi ripeterlo dalle impostazioni. La configurazione esistente resta attiva finché il nuovo percorso non viene completato e confermato.
+## Reader mode
 
-## Fonti e modalità Reader
+News downloads the public article page and extracts readable headings, paragraphs, quotes and images. If the page cannot be cleanly extracted, the plugin keeps the headline/preview and offers the original website.
 
-Puoi incollare la home page di una testata, un feed RSS/Atom diretto oppure un canale YouTube riconoscibile. Se un sito non espone feed pubblici, blocca l'accesso automatico o non offre un articolo estraibile, News mantiene anteprima e collegamento **Apri sul sito**: non aggira paywall o limitazioni della fonte.
+## Reader and artwork caching
 
-Le immagini vengono cercate nella pagina, nei dati strutturati e nel corpo dell'articolo, scartando icone, avatar e loghi troppo piccoli. Gli asset risolti vengono memorizzati in locale per evitare richieste e caricamenti ripetuti durante la navigazione.
+- News classifies **individual articles**, not entire publishers, before placing them in category tabs.
+- Article artwork is progressively resolved from the publisher page, JSON-LD and article-body images.
+- Resolved images are downloaded to a local cache and served from a tiny localhost image server, reducing repeated hotlink requests while browsing tabs or reopening articles.
+- Reader extraction also checks structured JSON/application data and AMP pages when normal HTML is only a shell.
+- Public X, Instagram, Facebook and TikTok links are kept in article order as centered embeds; YouTube and TikTok video embeds can be controlled with the gamepad.
 
-## Lingue
+## Languages
 
-News segue automaticamente la lingua di Steam. Sono incluse traduzioni per italiano, inglese, spagnolo, francese, tedesco, portoghese brasiliano, russo, giapponese e cinese semplificato; le lingue non disponibili usano l'inglese.
+News automatically follows the Steam / Big Picture interface language. It recognizes both normal locale codes and Steam-style identifiers such as `italian`, `brazilian`, `russian`, `japanese` and `schinese`. Unsupported languages fall back consistently to English.
 
-## Installazione
+The interface currently includes Italian plus eight additional translations:
 
-Puoi installare e aggiornare News dal Plugin Store di [Playhub](https://github.com/LoZazaMastro/Playhub), oppure scaricare lo ZIP dall'[ultima release](https://github.com/LoZazaMastro/News/releases/latest) e installarlo da **Decky → Impostazioni → Sviluppatore → Installa plugin da ZIP**.
+- Italian
+- English
+- Spanish
+- French
+- German
+- Brazilian Portuguese
+- Russian
+- Japanese
+- Simplified Chinese
 
-Il core non dipende da helper esclusivi di Windows ed è progettato per funzionare anche sulle installazioni Linux supportate da Decky.
+Country names, category labels, relative timestamps, onboarding, QAM, Edicola, Reader, Settings and common runtime messages all follow the detected interface locale. Translation catalogs are kept in `src/locales.json` and validated with `npm run validate:translations`.
 
-## Sviluppo
+## Project structure
+
+- `src/index.tsx` — QAM, onboarding, Edicola, reader, settings UI and runtime locale detection.
+- `src/locales.json` — validated interface translations.
+- `main.py` — feed discovery/fetching, cache, article extraction and persistence.
+- `source_catalog.json` — starter source catalog.
+- `countries.json` — country picker data.
+- `dist/index.js` — bundled frontend loaded by Decky.
+
+## 1.0.1 maintenance update
+
+This release removes the startup dependency on `http.server`, adjusts Big Picture navigation, and cleans up News-owned timers/connections on reload. See `CHANGELOG_1.0.1.md` for the changes and `TEST_REPORT_1.0.1.md` for the exact test scope. Existing sources, translations and configuration are retained.
+
+Use `News-decky_Installer-1.0.1.zip` as the installable Decky ZIP. `News-project-1.0.1.zip` is the source/development archive, including the same built runtime files. No Python package installation is required for the new image server.
+
+## Build
 
 ```bash
 npm install
-npm run validate:translations
 npm run build
 python -m py_compile main.py
 ```
 
-Il frontend e le traduzioni sono in `src/`; scoperta delle fonti, download, Reader e cache sono gestiti da `main.py`.
+The shipped frontend was generated using `npm run build:standalone`. This alternative needs TypeScript locally or globally installed and uses the React/UI injected by Decky. The normal `build` command above also performs a full dependency-based typecheck and Rollup build.
 
-## Licenza
+```bash
+npm run build:standalone
+npm run verify
+npm test
+python scripts/package_release.py
+```
 
-News è distribuito con licenza [MIT](LICENSE). I contenuti visualizzati restano di proprietà delle rispettive fonti.
+## Version
 
-<div align="center">
+Current release version: **1.0.1**.
 
-Creato e mantenuto da **[LoZazaMastro](https://github.com/LoZazaMastro)**.
+## License
 
-</div>
+MIT.

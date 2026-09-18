@@ -1,3 +1,4 @@
+// News 1.0.1 — generated from src/index.tsx; do not edit dist by hand.
 const manifest = {"name":"News"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
@@ -5,7 +6,8 @@ if (!internalAPIConnection) throw new Error("[@decky/api]: Decky Loader API is u
 let api;
 try { api = internalAPIConnection.connect(API_VERSION, manifest.name); }
 catch { api = internalAPIConnection.connect(1, manifest.name); console.warn("[News] Falling back to Decky API v1."); }
-const call = api.call;
+if (typeof api?.call !== "function" || !api?.routerHook) throw new Error("[News]: This Decky Loader does not expose the required plugin API.");
+const call = api.call.bind(api);
 const routerHook = api.routerHook;
 const definePlugin = (fn) => (...args) => fn(...args);
 const { DialogButton, Focusable, GamepadButton, Navigation, PanelSection, PanelSectionRow, Router, TextField, findModuleExport } = DFL;
@@ -24,6 +26,18 @@ const CONFIG_CHANGED_EVENT = "decky-news:config-changed";
 // reader back to the Edicola remounts the route; without this cache there is a
 // first render where config/tabs are temporarily empty, which used to flash the
 // impossible "no active tabs" + "preparing" state reported by Andrea.
+let newsDisposed = false;
+const backgroundUiTimers = new Set();
+function scheduleNewsTask(callback, delay) {
+    if (newsDisposed)
+        return;
+    const timer = window.setTimeout(() => {
+        backgroundUiTimers.delete(timer);
+        if (!newsDisposed)
+            callback();
+    }, delay);
+    backgroundUiTimers.add(timer);
+}
 let bootstrapUiCache = null;
 let bootstrapLoadPromise = null;
 const NEWS_TRANSLATIONS = { "it": { "openKiosk": "Apri l'edicola", "settings": "Impostazioni", "settingsDetail": "Fonti, tab e aggiornamento dell'Edicola", "refresh": "Aggiorna", "back": "Indietro", "cancel": "Annulla", "close": "Chiudi", "retry": "Riprova", "continue": "Continua", "add": "Aggiungi", "remove": "Rimuovi", "enable": "Attiva", "disable": "Disattiva", "delete": "Elimina", "save": "Salva", "saving": "Salvataggio…", "search": "Cerca online", "findFeed": "Trova feed", "readSite": "Leggi sul sito", "loading": "Caricamento…", "updating": "Aggiornamento…", "play": "Riproduci", "pause": "Pausa", "now": "adesso", "yesterday": "ieri", "minutesAgo": "{n} min fa", "hoursAgo": "{n} ore fa", "daysAgo": "{n} giorni fa", "video": "Video", "minutesUnit": "min", "personalKiosk": "La tua edicola personale", "personalKioskDetail": "Scegli paesi, fonti e categorie. News organizzerà tutto per la lettura rapida e per l'Edicola.", "configure": "Configura News", "noNews": "Nessuna notizia", "noNewsDetail": "Controlla le fonti o aggiorna il feed.", "noActiveTab": "Nessun tab attivo", "emptyPage": "Questa pagina è ancora vuota", "prepareKiosk": "Preparazione dell'edicola…", "prepareOnboarding": "Preparazione…", "articleLoading": "Caricamento dell'articolo…", "readerPartial": "La fonte rende disponibile solo una parte del contenuto in questa modalità. Puoi continuare con “Leggi sul sito”.", "readerUnavailable": "Non sono riuscito a estrarre un corpo leggibile da questa pagina. La copertina e i dati disponibili restano visibili; puoi continuare con “Leggi sul sito”.", "setup": "Configurazione", "startTitle": "Da dove vuoi iniziare?", "startDetail": "Scegli il paese principale. In seguito potrai aggiungere fonti e notizie da tutti gli altri paesi senza cambiare questa preferenza.", "primaryCountry": "Paese principale", "chooseSources": "Scegli le tue fonti", "chooseSourcesDetail": "Scegli un paese, cerca una testata oppure aggiungi un sito/feed. Puoi mescolare liberamente fonti di paesi diversi nella stessa Edicola.", "sourceCountry": "Paese delle fonti", "sourceName": "Nome della fonte", "addSiteFeed": "Aggiungi un sito o un feed", "sourcesWorldwide": "Fonti suggerite dal mondo", "sourcesWorldwideDetail": "Una selezione rapida di testate utili per costruire un'Edicola internazionale.", "addOtherCountries": "Vuoi aggiungere fonti anche da altri paesi?", "addOtherCountriesDetail": "Le fonti che hai già selezionato restano salvate. Scegli un altro paese nel menu sopra per continuare a costruire un'Edicola internazionale.", "buildKiosk": "Costruisci l'Edicola", "buildKioskDetail": "Scegli le sezioni che vuoi in alto. Le notizie vengono categorizzate articolo per articolo.", "customTab": "Tab personalizzata", "tabName": "Nome della tab", "readyTitle": "La tua edicola è pronta", "readyDetail": "Questa è la configurazione iniziale. Potrai aggiungere, rimuovere e riordinare fonti e tab dalle impostazioni.", "enterKiosk": "Entra nell'Edicola", "sources": "Fonti", "country": "Paese", "tabs": "Tab", "tabsHeading": "Tab dell'Edicola", "newTab": "Nuova tab", "createTab": "Crea tab", "addSourcesAny": "Aggiungi fonti da qualsiasi paese", "countryHeadlines": "Notizie principali del paese", "updateHeading": "Aggiornamento", "cacheInterval": "Intervallo cache", "clearCache": "Svuota cache", "repeatSetup": "Ripeti configurazione iniziale", "resetHeading": "Ripristino", "resetAll": "Cancella tutto e ricomincia da zero", "resetDetail": "Elimina fonti, tab e cache di News e riapre la configurazione iniziale.", "includedSources": "Fonti incluse", "tabVisibility": "Visibilità della tab", "tabVisibilityDetail": "Puoi nasconderla senza eliminare la configurazione.", "edit": "Modifica", "editTab": "MODIFICA TAB", "name": "Nome", "activateTab": "Attiva tab", "deactivateTab": "Disattiva tab", "deleteTab": "Elimina tab", "active": "Attiva", "inactive": "Disattivata", "availableSourcesFor": "{n} fonti disponibili per {country}", "noPreconfiguredSources": "Nessuna fonte preconfigurata per {country}: usa la ricerca online o aggiungi le notizie principali.", "selectedSourcesSummary": "{sources} fonti selezionate da {countries} paesi", "onlineSearchMinChars": "Scrivi almeno due caratteri per cercare fonti online.", "onlineSourcesAdded": "{n} fonti online aggiunte ai risultati.", "onlineSourcesFound": "{n} fonti trovate online.", "noMoreSources": "Nessun’altra fonte trovata online.", "onlineSearchUnavailable": "Ricerca online non disponibile.", "sourceAdded": "{name} aggiunta.", "sourceNotFound": "Fonte non trovata.", "countryHeadlinesFailed": "Impossibile aggiungere le notizie principali del paese.", "selectAtLeastOneSource": "Seleziona almeno una fonte.", "saveConfigFailed": "Non ho potuto salvare la configurazione.", "alreadyPresent": "{name} è già presente.", "mustKeepActiveTab": "Deve rimanere almeno una tab attiva.", "mustKeepTab": "Deve rimanere almeno una tab.", "resetFailed": "Non sono riuscito a cancellare la configurazione.", "cacheCleared": "Cache delle notizie svuotata.", "tabUnavailable": "Tab non disponibile", "saveTabFailed": "Non sono riuscito a salvare la tab.", "deleteTabFailed": "Non sono riuscito a eliminare la tab.", "sourcesAvailable": "{n} fonti disponibili", "noSourcesAvailable": "Nessuna fonte disponibile", "selected": "Selezionata", "catAll": "Tutte", "catPolitics": "Politica", "catEconomy": "Economia", "catSports": "Sport", "catGames": "Videogiochi", "catMusic": "Musica", "catCinema": "Cinema e Serie", "catFashion": "Moda", "catScience": "Scienza", "catHealth": "Salute", "catComics": "Fumetti", "catTech": "Tecnologia", "catArt": "Arte", "catTravel": "Viaggi", "catFood": "Cucina", "feedErrorsSummary": "{n} fonti non hanno risposto. Le altre notizie sono state caricate normalmente.", "backendUnavailable": "Il backend di News non risponde.", "enterSourceAddress": "Inserisci l'indirizzo del sito o del feed.", "unusableSource": "Non sono riuscito a creare una fonte utilizzabile per questo indirizzo.", "articleUrlMissing": "URL articolo mancante.", "invalidConfiguration": "Configurazione non valida.", "sourceUnreachable": "Impossibile raggiungere la fonte" }, "en": { "openKiosk": "Open newsstand", "settings": "Settings", "settingsDetail": "Sources, tabs and newsstand refresh settings", "refresh": "Refresh", "back": "Back", "cancel": "Cancel", "close": "Close", "retry": "Retry", "continue": "Continue", "add": "Add", "remove": "Remove", "enable": "Enable", "disable": "Disable", "delete": "Delete", "save": "Save", "saving": "Saving…", "search": "Search online", "findFeed": "Find feed", "readSite": "Read on website", "loading": "Loading…", "updating": "Refreshing…", "play": "Play", "pause": "Pause", "now": "now", "yesterday": "yesterday", "minutesAgo": "{n} min ago", "hoursAgo": "{n} hr ago", "daysAgo": "{n} days ago", "video": "Video", "minutesUnit": "min", "personalKiosk": "Your personal newsstand", "personalKioskDetail": "Choose countries, sources and categories. News organizes everything for quick reading and the full newsstand.", "configure": "Set up News", "noNews": "No news", "noNewsDetail": "Check your sources or refresh the feed.", "noActiveTab": "No active tabs", "emptyPage": "This page is still empty", "prepareKiosk": "Preparing the newsstand…", "prepareOnboarding": "Preparing…", "articleLoading": "Loading article…", "readerPartial": "This source only makes part of the content available in Reader mode. You can continue with “Read on website”.", "readerUnavailable": "I could not extract a readable article body from this page. The cover and available details remain visible; you can continue with “Read on website”.", "setup": "Setup", "startTitle": "Where would you like to start?", "startDetail": "Choose your main country. You can add sources and news from any other country later without changing this preference.", "primaryCountry": "Main country", "chooseSources": "Choose your sources", "chooseSourcesDetail": "Choose a country, search for a publisher or add a website/feed. You can freely mix sources from different countries in the same newsstand.", "sourceCountry": "Source country", "sourceName": "Source name", "addSiteFeed": "Add a website or feed", "sourcesWorldwide": "Suggested sources worldwide", "sourcesWorldwideDetail": "A quick selection of useful publishers for building an international newsstand.", "addOtherCountries": "Would you like to add sources from other countries?", "addOtherCountriesDetail": "Your current selections stay saved. Choose another country above to keep building an international newsstand.", "buildKiosk": "Build your newsstand", "buildKioskDetail": "Choose the sections shown at the top. News stories are categorized article by article.", "customTab": "Custom tab", "tabName": "Tab name", "readyTitle": "Your newsstand is ready", "readyDetail": "This is the initial setup. You can add, remove and reorder sources and tabs later in Settings.", "enterKiosk": "Enter newsstand", "sources": "Sources", "country": "Country", "tabs": "Tabs", "tabsHeading": "Newsstand tabs", "newTab": "New tab", "createTab": "Create tab", "addSourcesAny": "Add sources from any country", "countryHeadlines": "Top news from this country", "updateHeading": "Refresh", "cacheInterval": "Cache interval", "clearCache": "Clear cache", "repeatSetup": "Run setup again", "resetHeading": "Reset", "resetAll": "Delete everything and start over", "resetDetail": "Deletes News sources, tabs and cache, then opens the initial setup again.", "includedSources": "Included sources", "tabVisibility": "Tab visibility", "tabVisibilityDetail": "Hide it without deleting its configuration.", "edit": "Edit", "editTab": "EDIT TAB", "name": "Name", "activateTab": "Enable tab", "deactivateTab": "Disable tab", "deleteTab": "Delete tab", "active": "Active", "inactive": "Disabled", "availableSourcesFor": "{n} sources available for {country}", "noPreconfiguredSources": "No preconfigured sources for {country}: use online search or add the country’s top news.", "selectedSourcesSummary": "{sources} sources selected from {countries} countries", "onlineSearchMinChars": "Enter at least two characters to search sources online.", "onlineSourcesAdded": "{n} online sources added to the results.", "onlineSourcesFound": "{n} sources found online.", "noMoreSources": "No additional sources found online.", "onlineSearchUnavailable": "Online search is unavailable.", "sourceAdded": "{name} added.", "sourceNotFound": "Source not found.", "countryHeadlinesFailed": "Could not add the country’s top news.", "selectAtLeastOneSource": "Select at least one source.", "saveConfigFailed": "Could not save the configuration.", "alreadyPresent": "{name} is already added.", "mustKeepActiveTab": "At least one tab must remain enabled.", "mustKeepTab": "At least one tab must remain.", "resetFailed": "Could not reset the configuration.", "cacheCleared": "News cache cleared.", "tabUnavailable": "Tab unavailable", "saveTabFailed": "Could not save the tab.", "deleteTabFailed": "Could not delete the tab.", "sourcesAvailable": "{n} sources available", "noSourcesAvailable": "No sources available", "selected": "Selected", "catAll": "All", "catPolitics": "Politics", "catEconomy": "Economy", "catSports": "Sports", "catGames": "Gaming", "catMusic": "Music", "catCinema": "Movies & Series", "catFashion": "Fashion", "catScience": "Science", "catHealth": "Health", "catComics": "Comics", "catTech": "Technology", "catArt": "Art", "catTravel": "Travel", "catFood": "Food", "feedErrorsSummary": "{n} sources did not respond. The other news stories loaded normally.", "backendUnavailable": "The News backend is not responding.", "enterSourceAddress": "Enter the website or feed address.", "unusableSource": "Could not create a usable source from this address.", "articleUrlMissing": "Article URL is missing.", "invalidConfiguration": "Invalid configuration.", "sourceUnreachable": "Could not reach the source" }, "es": { "openKiosk": "Abrir el quiosco", "settings": "Ajustes", "settingsDetail": "Fuentes, pestañas y actualización del quiosco", "refresh": "Actualizar", "back": "Atrás", "cancel": "Cancelar", "close": "Cerrar", "retry": "Reintentar", "continue": "Continuar", "add": "Añadir", "remove": "Eliminar", "enable": "Activar", "disable": "Desactivar", "delete": "Eliminar", "save": "Guardar", "saving": "Guardando…", "search": "Buscar en línea", "findFeed": "Buscar feed", "readSite": "Leer en el sitio", "loading": "Cargando…", "updating": "Actualizando…", "play": "Reproducir", "pause": "Pausa", "now": "ahora", "yesterday": "ayer", "minutesAgo": "hace {n} min", "hoursAgo": "hace {n} h", "daysAgo": "hace {n} días", "video": "Vídeo", "minutesUnit": "min", "personalKiosk": "Tu quiosco personal", "personalKioskDetail": "Elige países, fuentes y categorías. News lo organiza todo para una lectura rápida y para el quiosco.", "configure": "Configurar News", "noNews": "Sin noticias", "noNewsDetail": "Comprueba las fuentes o actualiza el feed.", "noActiveTab": "No hay pestañas activas", "emptyPage": "Esta página todavía está vacía", "prepareKiosk": "Preparando el quiosco…", "prepareOnboarding": "Preparando…", "articleLoading": "Cargando el artículo…", "readerPartial": "Esta fuente solo ofrece parte del contenido en el modo de lectura. Puedes continuar con “Leer en el sitio”.", "readerUnavailable": "No he podido extraer un cuerpo de artículo legible de esta página. La portada y los datos disponibles siguen visibles; puedes continuar con “Leer en el sitio”.", "setup": "Configuración", "startTitle": "¿Por dónde quieres empezar?", "startDetail": "Elige tu país principal. Más adelante podrás añadir fuentes y noticias de cualquier otro país sin cambiar esta preferencia.", "primaryCountry": "País principal", "chooseSources": "Elige tus fuentes", "chooseSourcesDetail": "Elige un país, busca un medio o añade un sitio/feed. Puedes mezclar libremente fuentes de distintos países en el mismo quiosco.", "sourceCountry": "País de las fuentes", "sourceName": "Nombre de la fuente", "addSiteFeed": "Añadir un sitio o feed", "sourcesWorldwide": "Fuentes sugeridas del mundo", "sourcesWorldwideDetail": "Una selección rápida de medios útiles para crear un quiosco internacional.", "addOtherCountries": "¿Quieres añadir fuentes de otros países?", "addOtherCountriesDetail": "Las fuentes ya seleccionadas permanecen guardadas. Elige otro país arriba para seguir creando un quiosco internacional.", "buildKiosk": "Construye tu quiosco", "buildKioskDetail": "Elige las secciones que aparecerán arriba. Las noticias se categorizan artículo por artículo.", "customTab": "Pestaña personalizada", "tabName": "Nombre de la pestaña", "readyTitle": "Tu quiosco está listo", "readyDetail": "Esta es la configuración inicial. Después podrás añadir, eliminar y reordenar fuentes y pestañas desde Ajustes.", "enterKiosk": "Entrar al quiosco", "sources": "Fuentes", "country": "País", "tabs": "Pestañas", "tabsHeading": "Pestañas del quiosco", "newTab": "Nueva pestaña", "createTab": "Crear pestaña", "addSourcesAny": "Añadir fuentes de cualquier país", "countryHeadlines": "Noticias principales del país", "updateHeading": "Actualización", "cacheInterval": "Intervalo de caché", "clearCache": "Vaciar caché", "repeatSetup": "Repetir configuración inicial", "resetHeading": "Restablecer", "resetAll": "Borrar todo y empezar de nuevo", "resetDetail": "Elimina fuentes, pestañas y caché de News y vuelve a abrir la configuración inicial.", "includedSources": "Fuentes incluidas", "tabVisibility": "Visibilidad de la pestaña", "tabVisibilityDetail": "Puedes ocultarla sin eliminar su configuración.", "edit": "Editar", "editTab": "EDITAR PESTAÑA", "name": "Nombre", "activateTab": "Activar pestaña", "deactivateTab": "Desactivar pestaña", "deleteTab": "Eliminar pestaña", "active": "Activa", "inactive": "Desactivada", "availableSourcesFor": "{n} fuentes disponibles para {country}", "noPreconfiguredSources": "No hay fuentes preconfiguradas para {country}: usa la búsqueda en línea o añade las noticias principales del país.", "selectedSourcesSummary": "{sources} fuentes seleccionadas de {countries} países", "onlineSearchMinChars": "Escribe al menos dos caracteres para buscar fuentes en línea.", "onlineSourcesAdded": "{n} fuentes en línea añadidas a los resultados.", "onlineSourcesFound": "{n} fuentes encontradas en línea.", "noMoreSources": "No se encontraron más fuentes en línea.", "onlineSearchUnavailable": "La búsqueda en línea no está disponible.", "sourceAdded": "{name} añadida.", "sourceNotFound": "Fuente no encontrada.", "countryHeadlinesFailed": "No se pudieron añadir las noticias principales del país.", "selectAtLeastOneSource": "Selecciona al menos una fuente.", "saveConfigFailed": "No se pudo guardar la configuración.", "alreadyPresent": "{name} ya está añadida.", "mustKeepActiveTab": "Debe quedar al menos una pestaña activa.", "mustKeepTab": "Debe quedar al menos una pestaña.", "resetFailed": "No se pudo borrar la configuración.", "cacheCleared": "Caché de noticias vaciada.", "tabUnavailable": "Pestaña no disponible", "saveTabFailed": "No se pudo guardar la pestaña.", "deleteTabFailed": "No se pudo eliminar la pestaña.", "sourcesAvailable": "{n} fuentes disponibles", "noSourcesAvailable": "No hay fuentes disponibles", "selected": "Seleccionada", "catAll": "Todas", "catPolitics": "Política", "catEconomy": "Economía", "catSports": "Deportes", "catGames": "Videojuegos", "catMusic": "Música", "catCinema": "Cine y Series", "catFashion": "Moda", "catScience": "Ciencia", "catHealth": "Salud", "catComics": "Cómics", "catTech": "Tecnología", "catArt": "Arte", "catTravel": "Viajes", "catFood": "Cocina", "feedErrorsSummary": "{n} fuentes no respondieron. Las demás noticias se cargaron normalmente.", "backendUnavailable": "El backend de News no responde.", "enterSourceAddress": "Introduce la dirección del sitio o del feed.", "unusableSource": "No se pudo crear una fuente utilizable a partir de esta dirección.", "articleUrlMissing": "Falta la URL del artículo.", "invalidConfiguration": "Configuración no válida.", "sourceUnreachable": "No se pudo acceder a la fuente" }, "fr": { "openKiosk": "Ouvrir le kiosque", "settings": "Paramètres", "settingsDetail": "Sources, onglets et actualisation du kiosque", "refresh": "Actualiser", "back": "Retour", "cancel": "Annuler", "close": "Fermer", "retry": "Réessayer", "continue": "Continuer", "add": "Ajouter", "remove": "Supprimer", "enable": "Activer", "disable": "Désactiver", "delete": "Supprimer", "save": "Enregistrer", "saving": "Enregistrement…", "search": "Rechercher en ligne", "findFeed": "Trouver le flux", "readSite": "Lire sur le site", "loading": "Chargement…", "updating": "Actualisation…", "play": "Lecture", "pause": "Pause", "now": "à l’instant", "yesterday": "hier", "minutesAgo": "il y a {n} min", "hoursAgo": "il y a {n} h", "daysAgo": "il y a {n} jours", "video": "Vidéo", "minutesUnit": "min", "personalKiosk": "Votre kiosque personnel", "personalKioskDetail": "Choisissez des pays, des sources et des catégories. News organise tout pour une lecture rapide et pour le kiosque.", "configure": "Configurer News", "noNews": "Aucune actualité", "noNewsDetail": "Vérifiez les sources ou actualisez le flux.", "noActiveTab": "Aucun onglet actif", "emptyPage": "Cette page est encore vide", "prepareKiosk": "Préparation du kiosque…", "prepareOnboarding": "Préparation…", "articleLoading": "Chargement de l’article…", "readerPartial": "Cette source ne fournit qu’une partie du contenu en mode lecture. Vous pouvez continuer avec « Lire sur le site ».", "readerUnavailable": "Impossible d’extraire un corps d’article lisible de cette page. La couverture et les informations disponibles restent visibles ; vous pouvez continuer avec « Lire sur le site ».", "setup": "Configuration", "startTitle": "Par où voulez-vous commencer ?", "startDetail": "Choisissez votre pays principal. Vous pourrez ensuite ajouter des sources et des actualités de n’importe quel autre pays sans modifier cette préférence.", "primaryCountry": "Pays principal", "chooseSources": "Choisissez vos sources", "chooseSourcesDetail": "Choisissez un pays, recherchez un média ou ajoutez un site/flux. Vous pouvez mélanger librement des sources de différents pays dans le même kiosque.", "sourceCountry": "Pays des sources", "sourceName": "Nom de la source", "addSiteFeed": "Ajouter un site ou un flux", "sourcesWorldwide": "Sources suggérées dans le monde", "sourcesWorldwideDetail": "Une sélection rapide de médias utiles pour créer un kiosque international.", "addOtherCountries": "Voulez-vous ajouter des sources d’autres pays ?", "addOtherCountriesDetail": "Les sources déjà sélectionnées restent enregistrées. Choisissez un autre pays ci-dessus pour continuer à créer un kiosque international.", "buildKiosk": "Construisez votre kiosque", "buildKioskDetail": "Choisissez les sections à afficher en haut. Les actualités sont classées article par article.", "customTab": "Onglet personnalisé", "tabName": "Nom de l’onglet", "readyTitle": "Votre kiosque est prêt", "readyDetail": "Il s’agit de la configuration initiale. Vous pourrez ensuite ajouter, supprimer et réorganiser les sources et les onglets dans les Paramètres.", "enterKiosk": "Entrer dans le kiosque", "sources": "Sources", "country": "Pays", "tabs": "Onglets", "tabsHeading": "Onglets du kiosque", "newTab": "Nouvel onglet", "createTab": "Créer un onglet", "addSourcesAny": "Ajouter des sources de n’importe quel pays", "countryHeadlines": "Principales actualités du pays", "updateHeading": "Actualisation", "cacheInterval": "Intervalle du cache", "clearCache": "Vider le cache", "repeatSetup": "Relancer la configuration initiale", "resetHeading": "Réinitialisation", "resetAll": "Tout supprimer et recommencer", "resetDetail": "Supprime les sources, les onglets et le cache de News, puis rouvre la configuration initiale.", "includedSources": "Sources incluses", "tabVisibility": "Visibilité de l’onglet", "tabVisibilityDetail": "Vous pouvez le masquer sans supprimer sa configuration.", "edit": "Modifier", "editTab": "MODIFIER L’ONGLET", "name": "Nom", "activateTab": "Activer l’onglet", "deactivateTab": "Désactiver l’onglet", "deleteTab": "Supprimer l’onglet", "active": "Active", "inactive": "Désactivée", "availableSourcesFor": "{n} sources disponibles pour {country}", "noPreconfiguredSources": "Aucune source préconfigurée pour {country} : utilisez la recherche en ligne ou ajoutez les principales actualités du pays.", "selectedSourcesSummary": "{sources} sources sélectionnées dans {countries} pays", "onlineSearchMinChars": "Saisissez au moins deux caractères pour rechercher des sources en ligne.", "onlineSourcesAdded": "{n} sources en ligne ajoutées aux résultats.", "onlineSourcesFound": "{n} sources trouvées en ligne.", "noMoreSources": "Aucune autre source trouvée en ligne.", "onlineSearchUnavailable": "La recherche en ligne n’est pas disponible.", "sourceAdded": "{name} ajoutée.", "sourceNotFound": "Source introuvable.", "countryHeadlinesFailed": "Impossible d’ajouter les principales actualités du pays.", "selectAtLeastOneSource": "Sélectionnez au moins une source.", "saveConfigFailed": "Impossible d’enregistrer la configuration.", "alreadyPresent": "{name} est déjà ajoutée.", "mustKeepActiveTab": "Au moins un onglet doit rester actif.", "mustKeepTab": "Au moins un onglet doit rester.", "resetFailed": "Impossible de réinitialiser la configuration.", "cacheCleared": "Cache des actualités vidé.", "tabUnavailable": "Onglet indisponible", "saveTabFailed": "Impossible d’enregistrer l’onglet.", "deleteTabFailed": "Impossible de supprimer l’onglet.", "sourcesAvailable": "{n} sources disponibles", "noSourcesAvailable": "Aucune source disponible", "selected": "Sélectionnée", "catAll": "Toutes", "catPolitics": "Politique", "catEconomy": "Économie", "catSports": "Sport", "catGames": "Jeux vidéo", "catMusic": "Musique", "catCinema": "Cinéma et Séries", "catFashion": "Mode", "catScience": "Science", "catHealth": "Santé", "catComics": "BD", "catTech": "Technologie", "catArt": "Art", "catTravel": "Voyages", "catFood": "Cuisine", "feedErrorsSummary": "{n} sources n’ont pas répondu. Les autres actualités ont été chargées normalement.", "backendUnavailable": "Le service News ne répond pas.", "enterSourceAddress": "Saisissez l’adresse du site ou du flux.", "unusableSource": "Impossible de créer une source utilisable à partir de cette adresse.", "articleUrlMissing": "URL de l’article manquante.", "invalidConfiguration": "Configuration invalide.", "sourceUnreachable": "Impossible de joindre la source" }, "de": { "openKiosk": "Kiosk öffnen", "settings": "Einstellungen", "settingsDetail": "Quellen, Tabs und Aktualisierung des Kiosks", "refresh": "Aktualisieren", "back": "Zurück", "cancel": "Abbrechen", "close": "Schließen", "retry": "Erneut versuchen", "continue": "Weiter", "add": "Hinzufügen", "remove": "Entfernen", "enable": "Aktivieren", "disable": "Deaktivieren", "delete": "Löschen", "save": "Speichern", "saving": "Speichern…", "search": "Online suchen", "findFeed": "Feed finden", "readSite": "Auf Website lesen", "loading": "Laden…", "updating": "Aktualisieren…", "play": "Wiedergabe", "pause": "Pause", "now": "gerade eben", "yesterday": "gestern", "minutesAgo": "vor {n} Min.", "hoursAgo": "vor {n} Std.", "daysAgo": "vor {n} Tagen", "video": "Video", "minutesUnit": "Min.", "personalKiosk": "Dein persönlicher Kiosk", "personalKioskDetail": "Wähle Länder, Quellen und Kategorien. News organisiert alles für schnelles Lesen und den Kiosk.", "configure": "News einrichten", "noNews": "Keine Nachrichten", "noNewsDetail": "Prüfe die Quellen oder aktualisiere den Feed.", "noActiveTab": "Keine aktiven Tabs", "emptyPage": "Diese Seite ist noch leer", "prepareKiosk": "Kiosk wird vorbereitet…", "prepareOnboarding": "Vorbereitung…", "articleLoading": "Artikel wird geladen…", "readerPartial": "Diese Quelle stellt im Lesemodus nur einen Teil des Inhalts bereit. Du kannst mit „Auf Website lesen“ fortfahren.", "readerUnavailable": "Aus dieser Seite konnte kein lesbarer Artikeltext extrahiert werden. Titelbild und verfügbare Angaben bleiben sichtbar; du kannst mit „Auf Website lesen“ fortfahren.", "setup": "Einrichtung", "startTitle": "Wo möchtest du anfangen?", "startDetail": "Wähle dein Hauptland. Später kannst du Quellen und Nachrichten aus jedem anderen Land hinzufügen, ohne diese Einstellung zu ändern.", "primaryCountry": "Hauptland", "chooseSources": "Wähle deine Quellen", "chooseSourcesDetail": "Wähle ein Land, suche nach einem Medium oder füge eine Website/einen Feed hinzu. Quellen aus verschiedenen Ländern lassen sich frei im selben Kiosk mischen.", "sourceCountry": "Land der Quellen", "sourceName": "Name der Quelle", "addSiteFeed": "Website oder Feed hinzufügen", "sourcesWorldwide": "Empfohlene Quellen weltweit", "sourcesWorldwideDetail": "Eine schnelle Auswahl nützlicher Medien für einen internationalen Kiosk.", "addOtherCountries": "Möchtest du Quellen aus weiteren Ländern hinzufügen?", "addOtherCountriesDetail": "Deine bisherigen Quellen bleiben gespeichert. Wähle oben ein anderes Land, um den internationalen Kiosk weiter aufzubauen.", "buildKiosk": "Kiosk zusammenstellen", "buildKioskDetail": "Wähle die Bereiche, die oben angezeigt werden. Nachrichten werden Artikel für Artikel kategorisiert.", "customTab": "Benutzerdefinierter Tab", "tabName": "Tab-Name", "readyTitle": "Dein Kiosk ist bereit", "readyDetail": "Das ist die Ersteinrichtung. Quellen und Tabs kannst du später in den Einstellungen hinzufügen, entfernen und neu anordnen.", "enterKiosk": "Kiosk öffnen", "sources": "Quellen", "country": "Land", "tabs": "Tabs", "tabsHeading": "Kiosk-Tabs", "newTab": "Neuer Tab", "createTab": "Tab erstellen", "addSourcesAny": "Quellen aus jedem Land hinzufügen", "countryHeadlines": "Top-Nachrichten des Landes", "updateHeading": "Aktualisierung", "cacheInterval": "Cache-Intervall", "clearCache": "Cache leeren", "repeatSetup": "Ersteinrichtung wiederholen", "resetHeading": "Zurücksetzen", "resetAll": "Alles löschen und neu beginnen", "resetDetail": "Löscht Quellen, Tabs und Cache von News und öffnet die Ersteinrichtung erneut.", "includedSources": "Enthaltene Quellen", "tabVisibility": "Sichtbarkeit des Tabs", "tabVisibilityDetail": "Du kannst ihn ausblenden, ohne seine Konfiguration zu löschen.", "edit": "Bearbeiten", "editTab": "TAB BEARBEITEN", "name": "Name", "activateTab": "Tab aktivieren", "deactivateTab": "Tab deaktivieren", "deleteTab": "Tab löschen", "active": "Aktiv", "inactive": "Deaktiviert", "availableSourcesFor": "{n} Quellen für {country} verfügbar", "noPreconfiguredSources": "Keine vorkonfigurierten Quellen für {country}: Nutze die Online-Suche oder füge die Top-Nachrichten des Landes hinzu.", "selectedSourcesSummary": "{sources} Quellen aus {countries} Ländern ausgewählt", "onlineSearchMinChars": "Gib mindestens zwei Zeichen ein, um online nach Quellen zu suchen.", "onlineSourcesAdded": "{n} Online-Quellen zu den Ergebnissen hinzugefügt.", "onlineSourcesFound": "{n} Quellen online gefunden.", "noMoreSources": "Keine weiteren Online-Quellen gefunden.", "onlineSearchUnavailable": "Online-Suche nicht verfügbar.", "sourceAdded": "{name} hinzugefügt.", "sourceNotFound": "Quelle nicht gefunden.", "countryHeadlinesFailed": "Top-Nachrichten des Landes konnten nicht hinzugefügt werden.", "selectAtLeastOneSource": "Wähle mindestens eine Quelle aus.", "saveConfigFailed": "Konfiguration konnte nicht gespeichert werden.", "alreadyPresent": "{name} ist bereits vorhanden.", "mustKeepActiveTab": "Mindestens ein Tab muss aktiv bleiben.", "mustKeepTab": "Mindestens ein Tab muss erhalten bleiben.", "resetFailed": "Konfiguration konnte nicht zurückgesetzt werden.", "cacheCleared": "News-Cache geleert.", "tabUnavailable": "Tab nicht verfügbar", "saveTabFailed": "Tab konnte nicht gespeichert werden.", "deleteTabFailed": "Tab konnte nicht gelöscht werden.", "sourcesAvailable": "{n} Quellen verfügbar", "noSourcesAvailable": "Keine Quellen verfügbar", "selected": "Ausgewählt", "catAll": "Alle", "catPolitics": "Politik", "catEconomy": "Wirtschaft", "catSports": "Sport", "catGames": "Videospiele", "catMusic": "Musik", "catCinema": "Filme und Serien", "catFashion": "Mode", "catScience": "Wissenschaft", "catHealth": "Gesundheit", "catComics": "Comics", "catTech": "Technologie", "catArt": "Kunst", "catTravel": "Reisen", "catFood": "Essen", "feedErrorsSummary": "{n} Quellen haben nicht geantwortet. Die übrigen Nachrichten wurden normal geladen.", "backendUnavailable": "Das News-Backend antwortet nicht.", "enterSourceAddress": "Gib die Adresse der Website oder des Feeds ein.", "unusableSource": "Aus dieser Adresse konnte keine verwendbare Quelle erstellt werden.", "articleUrlMissing": "Artikel-URL fehlt.", "invalidConfiguration": "Ungültige Konfiguration.", "sourceUnreachable": "Quelle konnte nicht erreicht werden" }, "pt-br": { "openKiosk": "Abrir banca", "settings": "Configurações", "settingsDetail": "Fontes, abas e atualização da banca", "refresh": "Atualizar", "back": "Voltar", "cancel": "Cancelar", "close": "Fechar", "retry": "Tentar novamente", "continue": "Continuar", "add": "Adicionar", "remove": "Remover", "enable": "Ativar", "disable": "Desativar", "delete": "Excluir", "save": "Salvar", "saving": "Salvando…", "search": "Pesquisar online", "findFeed": "Encontrar feed", "readSite": "Ler no site", "loading": "Carregando…", "updating": "Atualizando…", "play": "Reproduzir", "pause": "Pausar", "now": "agora", "yesterday": "ontem", "minutesAgo": "há {n} min", "hoursAgo": "há {n} h", "daysAgo": "há {n} dias", "video": "Vídeo", "minutesUnit": "min", "personalKiosk": "Sua banca pessoal", "personalKioskDetail": "Escolha países, fontes e categorias. O News organiza tudo para leitura rápida e para a banca.", "configure": "Configurar News", "noNews": "Nenhuma notícia", "noNewsDetail": "Verifique as fontes ou atualize o feed.", "noActiveTab": "Nenhuma aba ativa", "emptyPage": "Esta página ainda está vazia", "prepareKiosk": "Preparando a banca…", "prepareOnboarding": "Preparando…", "articleLoading": "Carregando artigo…", "readerPartial": "Esta fonte disponibiliza apenas parte do conteúdo no modo de leitura. Você pode continuar em “Ler no site”.", "readerUnavailable": "Não foi possível extrair um corpo de artigo legível desta página. A capa e os dados disponíveis continuam visíveis; você pode continuar em “Ler no site”.", "setup": "Configuração", "startTitle": "Por onde você quer começar?", "startDetail": "Escolha seu país principal. Depois você poderá adicionar fontes e notícias de qualquer outro país sem alterar esta preferência.", "primaryCountry": "País principal", "chooseSources": "Escolha suas fontes", "chooseSourcesDetail": "Escolha um país, pesquise um veículo ou adicione um site/feed. Você pode misturar livremente fontes de países diferentes na mesma banca.", "sourceCountry": "País das fontes", "sourceName": "Nome da fonte", "addSiteFeed": "Adicionar site ou feed", "sourcesWorldwide": "Fontes sugeridas do mundo", "sourcesWorldwideDetail": "Uma seleção rápida de veículos úteis para montar uma banca internacional.", "addOtherCountries": "Quer adicionar fontes de outros países?", "addOtherCountriesDetail": "As fontes já selecionadas permanecem salvas. Escolha outro país acima para continuar montando uma banca internacional.", "buildKiosk": "Monte sua banca", "buildKioskDetail": "Escolha as seções que aparecem no topo. As notícias são categorizadas artigo por artigo.", "customTab": "Aba personalizada", "tabName": "Nome da aba", "readyTitle": "Sua banca está pronta", "readyDetail": "Esta é a configuração inicial. Depois você poderá adicionar, remover e reordenar fontes e abas nas Configurações.", "enterKiosk": "Entrar na banca", "sources": "Fontes", "country": "País", "tabs": "Abas", "tabsHeading": "Abas da banca", "newTab": "Nova aba", "createTab": "Criar aba", "addSourcesAny": "Adicionar fontes de qualquer país", "countryHeadlines": "Principais notícias do país", "updateHeading": "Atualização", "cacheInterval": "Intervalo do cache", "clearCache": "Limpar cache", "repeatSetup": "Refazer configuração inicial", "resetHeading": "Redefinir", "resetAll": "Apagar tudo e começar de novo", "resetDetail": "Exclui fontes, abas e cache do News e abre novamente a configuração inicial.", "includedSources": "Fontes incluídas", "tabVisibility": "Visibilidade da aba", "tabVisibilityDetail": "Você pode ocultá-la sem excluir a configuração.", "edit": "Editar", "editTab": "EDITAR ABA", "name": "Nome", "activateTab": "Ativar aba", "deactivateTab": "Desativar aba", "deleteTab": "Excluir aba", "active": "Ativa", "inactive": "Desativada", "availableSourcesFor": "{n} fontes disponíveis para {country}", "noPreconfiguredSources": "Nenhuma fonte pré-configurada para {country}: use a pesquisa online ou adicione as principais notícias do país.", "selectedSourcesSummary": "{sources} fontes selecionadas de {countries} países", "onlineSearchMinChars": "Digite pelo menos dois caracteres para pesquisar fontes online.", "onlineSourcesAdded": "{n} fontes online adicionadas aos resultados.", "onlineSourcesFound": "{n} fontes encontradas online.", "noMoreSources": "Nenhuma outra fonte encontrada online.", "onlineSearchUnavailable": "Pesquisa online indisponível.", "sourceAdded": "{name} adicionada.", "sourceNotFound": "Fonte não encontrada.", "countryHeadlinesFailed": "Não foi possível adicionar as principais notícias do país.", "selectAtLeastOneSource": "Selecione pelo menos uma fonte.", "saveConfigFailed": "Não foi possível salvar a configuração.", "alreadyPresent": "{name} já está presente.", "mustKeepActiveTab": "Pelo menos uma aba deve permanecer ativa.", "mustKeepTab": "Pelo menos uma aba deve permanecer.", "resetFailed": "Não foi possível redefinir a configuração.", "cacheCleared": "Cache de notícias limpo.", "tabUnavailable": "Aba indisponível", "saveTabFailed": "Não foi possível salvar a aba.", "deleteTabFailed": "Não foi possível excluir a aba.", "sourcesAvailable": "{n} fontes disponíveis", "noSourcesAvailable": "Nenhuma fonte disponível", "selected": "Selecionada", "catAll": "Todas", "catPolitics": "Política", "catEconomy": "Economia", "catSports": "Esportes", "catGames": "Jogos", "catMusic": "Música", "catCinema": "Filmes e Séries", "catFashion": "Moda", "catScience": "Ciência", "catHealth": "Saúde", "catComics": "Quadrinhos", "catTech": "Tecnologia", "catArt": "Arte", "catTravel": "Viagens", "catFood": "Culinária", "feedErrorsSummary": "{n} fontes não responderam. As outras notícias foram carregadas normalmente.", "backendUnavailable": "O backend do News não está respondendo.", "enterSourceAddress": "Digite o endereço do site ou feed.", "unusableSource": "Não foi possível criar uma fonte utilizável a partir deste endereço.", "articleUrlMissing": "A URL do artigo está ausente.", "invalidConfiguration": "Configuração inválida.", "sourceUnreachable": "Não foi possível acessar a fonte" }, "ru": { "openKiosk": "Открыть киоск", "settings": "Настройки", "settingsDetail": "Источники, вкладки и обновление киоска", "refresh": "Обновить", "back": "Назад", "cancel": "Отмена", "close": "Закрыть", "retry": "Повторить", "continue": "Продолжить", "add": "Добавить", "remove": "Удалить", "enable": "Включить", "disable": "Отключить", "delete": "Удалить", "save": "Сохранить", "saving": "Сохранение…", "search": "Искать онлайн", "findFeed": "Найти ленту", "readSite": "Читать на сайте", "loading": "Загрузка…", "updating": "Обновление…", "play": "Воспроизвести", "pause": "Пауза", "now": "сейчас", "yesterday": "вчера", "minutesAgo": "{n} мин назад", "hoursAgo": "{n} ч назад", "daysAgo": "{n} дн. назад", "video": "Видео", "minutesUnit": "мин", "personalKiosk": "Ваш персональный киоск", "personalKioskDetail": "Выберите страны, источники и категории. News организует всё для быстрого чтения и полноэкранного киоска.", "configure": "Настроить News", "noNews": "Нет новостей", "noNewsDetail": "Проверьте источники или обновите ленту.", "noActiveTab": "Нет активных вкладок", "emptyPage": "Эта страница пока пуста", "prepareKiosk": "Подготовка киоска…", "prepareOnboarding": "Подготовка…", "articleLoading": "Загрузка статьи…", "readerPartial": "Этот источник предоставляет в режиме чтения только часть материала. Можно продолжить через «Читать на сайте».", "readerUnavailable": "Не удалось извлечь читаемый текст статьи с этой страницы. Обложка и доступные данные остаются видимыми; можно продолжить через «Читать на сайте».", "setup": "Настройка", "startTitle": "С чего начать?", "startDetail": "Выберите основную страну. Позже можно добавлять источники и новости из любых других стран, не меняя эту настройку.", "primaryCountry": "Основная страна", "chooseSources": "Выберите источники", "chooseSourcesDetail": "Выберите страну, найдите издание или добавьте сайт/ленту. Источники из разных стран можно свободно смешивать в одном киоске.", "sourceCountry": "Страна источников", "sourceName": "Название источника", "addSiteFeed": "Добавить сайт или ленту", "sourcesWorldwide": "Рекомендуемые источники мира", "sourcesWorldwideDetail": "Быстрая подборка полезных изданий для международного киоска.", "addOtherCountries": "Добавить источники из других стран?", "addOtherCountriesDetail": "Уже выбранные источники сохраняются. Выберите другую страну выше, чтобы продолжить собирать международный киоск.", "buildKiosk": "Соберите киоск", "buildKioskDetail": "Выберите разделы, которые будут показаны сверху. Новости классифицируются по каждой статье отдельно.", "customTab": "Своя вкладка", "tabName": "Название вкладки", "readyTitle": "Ваш киоск готов", "readyDetail": "Это начальная настройка. Позже источники и вкладки можно добавлять, удалять и переставлять в Настройках.", "enterKiosk": "Открыть киоск", "sources": "Источники", "country": "Страна", "tabs": "Вкладки", "tabsHeading": "Вкладки киоска", "newTab": "Новая вкладка", "createTab": "Создать вкладку", "addSourcesAny": "Добавить источники из любой страны", "countryHeadlines": "Главные новости страны", "updateHeading": "Обновление", "cacheInterval": "Интервал кэша", "clearCache": "Очистить кэш", "repeatSetup": "Повторить начальную настройку", "resetHeading": "Сброс", "resetAll": "Удалить всё и начать заново", "resetDetail": "Удаляет источники, вкладки и кэш News и снова открывает начальную настройку.", "includedSources": "Включённые источники", "tabVisibility": "Видимость вкладки", "tabVisibilityDetail": "Её можно скрыть, не удаляя настройки.", "edit": "Изменить", "editTab": "ИЗМЕНИТЬ ВКЛАДКУ", "name": "Название", "activateTab": "Включить вкладку", "deactivateTab": "Отключить вкладку", "deleteTab": "Удалить вкладку", "active": "Активен", "inactive": "Отключён", "availableSourcesFor": "{n} источников доступно для {country}", "noPreconfiguredSources": "Для {country} нет готовых источников: используйте онлайн-поиск или добавьте главные новости страны.", "selectedSourcesSummary": "Выбрано источников: {sources}; стран: {countries}", "onlineSearchMinChars": "Введите минимум два символа для поиска источников онлайн.", "onlineSourcesAdded": "Онлайн-источников добавлено в результаты: {n}.", "onlineSourcesFound": "Найдено онлайн-источников: {n}.", "noMoreSources": "Других онлайн-источников не найдено.", "onlineSearchUnavailable": "Онлайн-поиск недоступен.", "sourceAdded": "{name} добавлен.", "sourceNotFound": "Источник не найден.", "countryHeadlinesFailed": "Не удалось добавить главные новости страны.", "selectAtLeastOneSource": "Выберите хотя бы один источник.", "saveConfigFailed": "Не удалось сохранить настройки.", "alreadyPresent": "{name} уже добавлен.", "mustKeepActiveTab": "Хотя бы одна вкладка должна оставаться активной.", "mustKeepTab": "Должна остаться хотя бы одна вкладка.", "resetFailed": "Не удалось сбросить настройки.", "cacheCleared": "Кэш новостей очищен.", "tabUnavailable": "Вкладка недоступна", "saveTabFailed": "Не удалось сохранить вкладку.", "deleteTabFailed": "Не удалось удалить вкладку.", "sourcesAvailable": "Доступно источников: {n}", "noSourcesAvailable": "Нет доступных источников", "selected": "Выбрано", "catAll": "Все", "catPolitics": "Политика", "catEconomy": "Экономика", "catSports": "Спорт", "catGames": "Игры", "catMusic": "Музыка", "catCinema": "Кино и сериалы", "catFashion": "Мода", "catScience": "Наука", "catHealth": "Здоровье", "catComics": "Комиксы", "catTech": "Технологии", "catArt": "Искусство", "catTravel": "Путешествия", "catFood": "Еда", "feedErrorsSummary": "{n} источников не ответили. Остальные новости загрузились нормально.", "backendUnavailable": "Служба News не отвечает.", "enterSourceAddress": "Введите адрес сайта или ленты.", "unusableSource": "Не удалось создать рабочий источник по этому адресу.", "articleUrlMissing": "Отсутствует URL статьи.", "invalidConfiguration": "Недопустимая конфигурация.", "sourceUnreachable": "Не удалось связаться с источником" }, "ja": { "openKiosk": "ニューススタンドを開く", "settings": "設定", "settingsDetail": "ソース、タブ、ニューススタンドの更新設定", "refresh": "更新", "back": "戻る", "cancel": "キャンセル", "close": "閉じる", "retry": "再試行", "continue": "続行", "add": "追加", "remove": "削除", "enable": "有効化", "disable": "無効化", "delete": "削除", "save": "保存", "saving": "保存中…", "search": "オンライン検索", "findFeed": "フィードを検索", "readSite": "サイトで読む", "loading": "読み込み中…", "updating": "更新中…", "play": "再生", "pause": "一時停止", "now": "たった今", "yesterday": "昨日", "minutesAgo": "{n}分前", "hoursAgo": "{n}時間前", "daysAgo": "{n}日前", "video": "動画", "minutesUnit": "分", "personalKiosk": "あなたのニューススタンド", "personalKioskDetail": "国、ソース、カテゴリを選択すると、News がクイック閲覧とニューススタンド用に整理します。", "configure": "News を設定", "noNews": "ニュースがありません", "noNewsDetail": "ソースを確認するか、フィードを更新してください。", "noActiveTab": "有効なタブがありません", "emptyPage": "このページはまだ空です", "prepareKiosk": "ニューススタンドを準備中…", "prepareOnboarding": "準備中…", "articleLoading": "記事を読み込み中…", "readerPartial": "このソースではリーダーモードで記事の一部のみ利用できます。「サイトで読む」で続行できます。", "readerUnavailable": "このページから読みやすい記事本文を抽出できませんでした。カバー画像と利用可能な情報は表示されたままです。「サイトで読む」で続行できます。", "setup": "セットアップ", "startTitle": "どこから始めますか？", "startDetail": "メインの国を選択してください。後から設定を変えずに、他の国のソースやニュースを追加できます。", "primaryCountry": "メインの国", "chooseSources": "ソースを選択", "chooseSourcesDetail": "国を選び、媒体を検索するか、サイト/フィードを追加してください。異なる国のソースを同じニューススタンドで自由に組み合わせられます。", "sourceCountry": "ソースの国", "sourceName": "ソース名", "addSiteFeed": "サイトまたはフィードを追加", "sourcesWorldwide": "世界のおすすめソース", "sourcesWorldwideDetail": "国際的なニューススタンドを作るための便利な媒体をすばやく選べます。", "addOtherCountries": "他の国のソースも追加しますか？", "addOtherCountriesDetail": "選択済みのソースは保存されます。上で別の国を選ぶと、国際ニューススタンドを続けて作成できます。", "buildKiosk": "ニューススタンドを作成", "buildKioskDetail": "上部に表示するセクションを選択してください。ニュースは記事ごとに分類されます。", "customTab": "カスタムタブ", "tabName": "タブ名", "readyTitle": "ニューススタンドの準備ができました", "readyDetail": "これは初期設定です。後から設定でソースやタブを追加、削除、並べ替えできます。", "enterKiosk": "ニューススタンドへ", "sources": "ソース", "country": "国", "tabs": "タブ", "tabsHeading": "ニューススタンドのタブ", "newTab": "新しいタブ", "createTab": "タブを作成", "addSourcesAny": "任意の国からソースを追加", "countryHeadlines": "この国の主要ニュース", "updateHeading": "更新", "cacheInterval": "キャッシュ間隔", "clearCache": "キャッシュを消去", "repeatSetup": "初期設定をやり直す", "resetHeading": "リセット", "resetAll": "すべて削除して最初からやり直す", "resetDetail": "News のソース、タブ、キャッシュを削除し、初期設定を再度開きます。", "includedSources": "含まれるソース", "tabVisibility": "タブの表示", "tabVisibilityDetail": "設定を削除せずに非表示にできます。", "edit": "編集", "editTab": "タブを編集", "name": "名前", "activateTab": "タブを有効化", "deactivateTab": "タブを無効化", "deleteTab": "タブを削除", "active": "有効", "inactive": "無効", "availableSourcesFor": "{country}で利用可能なソース: {n}", "noPreconfiguredSources": "{country}には事前設定されたソースがありません。オンライン検索を使うか、その国の主要ニュースを追加してください。", "selectedSourcesSummary": "{countries}か国から{sources}件のソースを選択", "onlineSearchMinChars": "オンラインでソースを検索するには2文字以上入力してください。", "onlineSourcesAdded": "オンラインソースを結果に{n}件追加しました。", "onlineSourcesFound": "オンラインで{n}件のソースが見つかりました。", "noMoreSources": "他のオンラインソースは見つかりませんでした。", "onlineSearchUnavailable": "オンライン検索を利用できません。", "sourceAdded": "{name}を追加しました。", "sourceNotFound": "ソースが見つかりません。", "countryHeadlinesFailed": "その国の主要ニュースを追加できませんでした。", "selectAtLeastOneSource": "少なくとも1つのソースを選択してください。", "saveConfigFailed": "設定を保存できませんでした。", "alreadyPresent": "{name}はすでに追加されています。", "mustKeepActiveTab": "少なくとも1つのタブを有効にしておく必要があります。", "mustKeepTab": "少なくとも1つのタブを残す必要があります。", "resetFailed": "設定をリセットできませんでした。", "cacheCleared": "ニュースキャッシュを消去しました。", "tabUnavailable": "タブを利用できません", "saveTabFailed": "タブを保存できませんでした。", "deleteTabFailed": "タブを削除できませんでした。", "sourcesAvailable": "利用可能なソース: {n}", "noSourcesAvailable": "利用可能なソースはありません", "selected": "選択済み", "catAll": "すべて", "catPolitics": "政治", "catEconomy": "経済", "catSports": "スポーツ", "catGames": "ゲーム", "catMusic": "音楽", "catCinema": "映画・ドラマ", "catFashion": "ファッション", "catScience": "科学", "catHealth": "健康", "catComics": "コミック", "catTech": "テクノロジー", "catArt": "アート", "catTravel": "旅行", "catFood": "グルメ", "feedErrorsSummary": "{n}件のソースが応答しませんでした。その他のニュースは正常に読み込まれました。", "backendUnavailable": "News バックエンドが応答していません。", "enterSourceAddress": "サイトまたはフィードのアドレスを入力してください。", "unusableSource": "このアドレスから利用可能なソースを作成できませんでした。", "articleUrlMissing": "記事の URL がありません。", "invalidConfiguration": "設定が無効です。", "sourceUnreachable": "ソースに接続できませんでした" }, "zh": { "openKiosk": "打开报刊亭", "settings": "设置", "settingsDetail": "来源、标签页和报刊亭刷新设置", "refresh": "刷新", "back": "返回", "cancel": "取消", "close": "关闭", "retry": "重试", "continue": "继续", "add": "添加", "remove": "移除", "enable": "启用", "disable": "停用", "delete": "删除", "save": "保存", "saving": "正在保存…", "search": "在线搜索", "findFeed": "查找订阅源", "readSite": "在网站阅读", "loading": "加载中…", "updating": "刷新中…", "play": "播放", "pause": "暂停", "now": "刚刚", "yesterday": "昨天", "minutesAgo": "{n} 分钟前", "hoursAgo": "{n} 小时前", "daysAgo": "{n} 天前", "video": "视频", "minutesUnit": "分钟", "personalKiosk": "你的个人报刊亭", "personalKioskDetail": "选择国家、来源和分类。News 会整理内容，方便快速阅读和在报刊亭中浏览。", "configure": "设置 News", "noNews": "暂无新闻", "noNewsDetail": "请检查来源或刷新订阅源。", "noActiveTab": "没有启用的标签页", "emptyPage": "此页面暂时为空", "prepareKiosk": "正在准备报刊亭…", "prepareOnboarding": "正在准备…", "articleLoading": "正在加载文章…", "readerPartial": "此来源在阅读模式下只提供部分内容。你可以选择“在网站阅读”继续。", "readerUnavailable": "无法从此页面提取可读的文章正文。封面和现有信息仍会显示；你可以选择“在网站阅读”继续。", "setup": "设置", "startTitle": "你想从哪里开始？", "startDetail": "选择主要国家。之后无需更改此设置，也可以添加其他国家的来源和新闻。", "primaryCountry": "主要国家", "chooseSources": "选择来源", "chooseSourcesDetail": "选择国家、搜索媒体，或添加网站/订阅源。你可以在同一个报刊亭中自由混合不同国家的来源。", "sourceCountry": "来源国家", "sourceName": "来源名称", "addSiteFeed": "添加网站或订阅源", "sourcesWorldwide": "全球推荐来源", "sourcesWorldwideDetail": "快速选择适合构建国际报刊亭的常用媒体。", "addOtherCountries": "还要添加其他国家的来源吗？", "addOtherCountriesDetail": "已选择的来源会保留。请在上方选择另一个国家，继续构建国际报刊亭。", "buildKiosk": "构建报刊亭", "buildKioskDetail": "选择顶部显示的栏目。新闻会逐篇文章进行分类。", "customTab": "自定义标签页", "tabName": "标签页名称", "readyTitle": "报刊亭已准备就绪", "readyDetail": "这是初始设置。之后可以在设置中添加、删除和重新排序来源及标签页。", "enterKiosk": "进入报刊亭", "sources": "来源", "country": "国家", "tabs": "标签页", "tabsHeading": "报刊亭标签页", "newTab": "新标签页", "createTab": "创建标签页", "addSourcesAny": "添加任意国家的来源", "countryHeadlines": "该国主要新闻", "updateHeading": "刷新", "cacheInterval": "缓存间隔", "clearCache": "清除缓存", "repeatSetup": "重新进行初始设置", "resetHeading": "重置", "resetAll": "全部删除并重新开始", "resetDetail": "删除 News 的来源、标签页和缓存，然后重新打开初始设置。", "includedSources": "包含的来源", "tabVisibility": "标签页可见性", "tabVisibilityDetail": "可以隐藏标签页而不删除其设置。", "edit": "编辑", "editTab": "编辑标签页", "name": "名称", "activateTab": "启用标签页", "deactivateTab": "停用标签页", "deleteTab": "删除标签页", "active": "启用", "inactive": "停用", "availableSourcesFor": "{country} 有 {n} 个可用来源", "noPreconfiguredSources": "{country} 没有预配置来源：请使用在线搜索或添加该国主要新闻。", "selectedSourcesSummary": "已从 {countries} 个国家选择 {sources} 个来源", "onlineSearchMinChars": "在线搜索来源至少需要输入两个字符。", "onlineSourcesAdded": "已向结果添加 {n} 个在线来源。", "onlineSourcesFound": "在线找到 {n} 个来源。", "noMoreSources": "未找到其他在线来源。", "onlineSearchUnavailable": "在线搜索不可用。", "sourceAdded": "已添加 {name}。", "sourceNotFound": "未找到来源。", "countryHeadlinesFailed": "无法添加该国主要新闻。", "selectAtLeastOneSource": "请至少选择一个来源。", "saveConfigFailed": "无法保存配置。", "alreadyPresent": "{name} 已经存在。", "mustKeepActiveTab": "至少需要保留一个启用的标签页。", "mustKeepTab": "至少需要保留一个标签页。", "resetFailed": "无法重置配置。", "cacheCleared": "新闻缓存已清除。", "tabUnavailable": "标签页不可用", "saveTabFailed": "无法保存标签页。", "deleteTabFailed": "无法删除标签页。", "sourcesAvailable": "{n} 个来源可用", "noSourcesAvailable": "没有可用来源", "selected": "已选择", "catAll": "全部", "catPolitics": "政治", "catEconomy": "经济", "catSports": "体育", "catGames": "游戏", "catMusic": "音乐", "catCinema": "电影和剧集", "catFashion": "时尚", "catScience": "科学", "catHealth": "健康", "catComics": "漫画", "catTech": "科技", "catArt": "艺术", "catTravel": "旅行", "catFood": "美食", "feedErrorsSummary": "{n} 个来源未响应。其他新闻已正常加载。", "backendUnavailable": "News 后端没有响应。", "enterSourceAddress": "请输入网站或订阅源地址。", "unusableSource": "无法从此地址创建可用来源。", "articleUrlMissing": "缺少文章 URL。", "invalidConfiguration": "配置无效。", "sourceUnreachable": "无法连接到来源" } };
@@ -198,11 +212,25 @@ function imageLooksLikeHero(candidate, heroSources = []) {
         return false;
     });
 }
+function callBackend(method, ...args) {
+    // A disconnected Decky bridge can throw synchronously, not just reject. Keep
+    // every UI .catch/finally path effective, and stop new requests after unload.
+    try {
+        if (newsDisposed)
+            return Promise.reject(new Error("News has been unloaded"));
+        return Promise.resolve(call(method, ...args));
+    }
+    catch (error) {
+        return Promise.reject(error);
+    }
+}
 function rpc(method, ...args) {
-    const request = call(method, ...args);
+    const request = callBackend(method, ...args);
     if (method !== "save_config")
         return request;
     return request.then((value) => {
+        if (newsDisposed)
+            return value;
         if (value?.ok) {
             if (value?.config && bootstrapUiCache)
                 bootstrapUiCache = { ...bootstrapUiCache, config: value.config };
@@ -221,7 +249,7 @@ function saveConfigSilent(config) {
     // fresh bootstrap RPC. The backend result then canonicalizes the cached copy.
     if (bootstrapUiCache)
         bootstrapUiCache = { ...bootstrapUiCache, config };
-    return call("save_config", config).then((value) => {
+    return callBackend("save_config", config).then((value) => {
         if (value?.ok && value?.config && bootstrapUiCache)
             bootstrapUiCache = { ...bootstrapUiCache, config: value.config };
         return value;
@@ -254,8 +282,53 @@ function formatDate(timestamp) {
 function nextId(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
+function steamRouter() {
+    // Steam exposes this store directly in the supplied September 2026 bundle.
+    // It also avoids a hard dependency on DFL's historical module signature.
+    return window.SteamUIStore ?? Router;
+}
+function steamWindows(store) {
+    try {
+        const windows = store?.SteamUIWindows;
+        return Array.isArray(windows) ? windows : windows?.values ? Array.from(windows.values()) : [];
+    }
+    catch {
+        return [];
+    }
+}
 function mainWindow() {
-    return Router?.WindowStore?.GamepadUIMainWindowInstance ?? Router?.WindowStore?.SteamUIWindows?.[0];
+    const router = steamRouter();
+    const store = router?.WindowStore ?? Router?.WindowStore;
+    const ready = (candidate) => {
+        try {
+            return candidate && typeof candidate.Navigate === "function" &&
+                (typeof candidate.BCanNavigate !== "function" || candidate.BCanNavigate());
+        }
+        catch {
+            return false;
+        }
+    };
+    const main = store?.GamepadUIMainWindowInstance;
+    if (ready(main))
+        return main;
+    const windows = steamWindows(store);
+    const gamepad = windows.find((candidate) => {
+        try {
+            return candidate?.IsGamepadUIWindow?.() && ready(candidate);
+        }
+        catch {
+            return false;
+        }
+    });
+    if (gamepad)
+        return gamepad;
+    try {
+        const focused = router?.GetFocusedWindowInstance?.();
+        if (ready(focused))
+            return focused;
+    }
+    catch { }
+    return windows.find(ready);
 }
 let chromeObservers = [];
 let chromeFrame = 0;
@@ -328,10 +401,9 @@ function fullscreenDocuments() {
         add(window.opener?.document);
     }
     catch { }
-    const store = Router?.WindowStore;
+    const store = steamRouter()?.WindowStore ?? Router?.WindowStore;
     addWin(store?.GamepadUIMainWindowInstance);
-    if (Array.isArray(store?.SteamUIWindows))
-        store.SteamUIWindows.forEach(addWin);
+    steamWindows(store).forEach(addWin);
     return result;
 }
 function chromeCss() {
@@ -386,7 +458,12 @@ function isVirtualKeyboardElement(element) {
     }
     return false;
 }
+const chromeInlineStyles = new Map();
 function hideChromeElement(element) {
+    if (!chromeInlineStyles.has(element)) {
+        chromeInlineStyles.set(element, ["display", "opacity", "visibility", "pointer-events", "transition", "animation"]
+            .map((name) => ({ name, value: element.style.getPropertyValue(name), priority: element.style.getPropertyPriority(name) })));
+    }
     element.dataset.newsFullscreenChrome = "true";
     element.style.setProperty("display", "none", "important");
     element.style.setProperty("opacity", "0", "important");
@@ -421,6 +498,8 @@ function markChrome(doc) {
     });
 }
 function markAllChrome() {
+    if (newsDisposed)
+        return;
     fullscreenDocuments().forEach((doc) => {
         ensureChromeStyle(doc);
         doc.documentElement.classList.add(ROOT_CLASS);
@@ -475,11 +554,17 @@ function deactivateChromeSuppression() {
     fullscreenDocuments().forEach((doc) => {
         doc.documentElement.classList.remove(ROOT_CLASS);
         doc.body?.classList.remove(ROOT_CLASS);
-        doc.querySelectorAll('[data-news-fullscreen-chrome="true"]').forEach((element) => {
-            delete element.dataset.newsFullscreenChrome;
-            ["display", "opacity", "visibility", "pointer-events", "transition", "animation"].forEach((name) => element.style.removeProperty(name));
+    });
+    chromeInlineStyles.forEach((properties, element) => {
+        delete element.dataset.newsFullscreenChrome;
+        properties.forEach(({ name, value, priority }) => {
+            if (value)
+                element.style.setProperty(name, value, priority);
+            else
+                element.style.removeProperty(name);
         });
     });
+    chromeInlineStyles.clear();
 }
 function retainChromeSuppression() {
     suppressionLeaseCount += 1;
@@ -527,29 +612,52 @@ function useFullscreenChrome() {
         return () => releaseChromeSuppression();
     }, []);
 }
-function navigate(path) {
-    holdChromeForTransition();
-    markAllChrome();
+function closeSideMenusAfterNavigation(win) {
+    // Decky's Navigation contract requires closing AFTER navigating; closing first
+    // can hide the Big Picture overlay during the route transition on Windows.
     try {
-        Navigation.CloseSideMenus();
+        if (typeof win?.MenuStore?.CloseSideMenus === "function")
+            win.MenuStore.CloseSideMenus();
+        else
+            Navigation?.CloseSideMenus?.();
     }
     catch { }
+}
+function navigate(path) {
+    if (newsDisposed)
+        return;
+    holdChromeForTransition();
     const win = mainWindow();
-    if (win?.Navigate)
-        win.Navigate(path);
-    else
-        Navigation.Navigate(path);
-    markAllChrome();
-    queueMicrotask(markAllChrome);
-    window.requestAnimationFrame(markAllChrome);
+    try {
+        if (typeof win?.Navigate === "function")
+            win.Navigate(path);
+        else if (typeof Navigation?.Navigate === "function")
+            Navigation.Navigate(path);
+        else
+            throw new Error("Steam navigation is unavailable");
+        closeSideMenusAfterNavigation(win);
+        markAllChrome();
+        queueMicrotask(markAllChrome);
+        scheduleChromeMark();
+    }
+    catch (error) {
+        forceRestoreChrome();
+        console.warn("[News] Could not open route", path, error);
+    }
 }
 function goBack() {
     const win = mainWindow();
-    if (win?.NavigateBack)
-        win.NavigateBack();
-    else
-        Navigation.NavigateBack();
-    [0, 60, 180, 420, 900].forEach((delay) => window.setTimeout(() => {
+    try {
+        if (typeof win?.NavigateBack === "function")
+            win.NavigateBack();
+        else
+            Navigation?.NavigateBack?.();
+    }
+    catch (error) {
+        console.warn("[News] Could not navigate back", error);
+        forceRestoreChrome();
+    }
+    [0, 60, 180, 420, 900].forEach((delay) => scheduleNewsTask(() => {
         const anyRoot = fullscreenDocuments().some((doc) => Boolean(doc.querySelector(".newsFullscreenRoot")));
         if (!anyRoot)
             forceRestoreChrome();
@@ -561,17 +669,27 @@ function openWebsiteInSteam(url) {
     const value = String(url || "").trim();
     if (!/^https?:\/\//i.test(value))
         return;
+    const win = mainWindow();
+    try {
+        // NavigateToSteamWeb is a WindowInstance method in the supplied Steam UI;
+        // DFL's wrapper can exist but silently fail to find the correct window.
+        if (typeof win?.NavigateToSteamWeb === "function") {
+            win.NavigateToSteamWeb(value);
+            closeSideMenusAfterNavigation(win);
+            return;
+        }
+        if (typeof win?.Navigator?.SteamWeb === "function") {
+            win.Navigator.SteamWeb(value);
+            closeSideMenusAfterNavigation(win);
+            return;
+        }
+    }
+    catch { }
     const nav = Navigation;
     try {
-        // Steam's own in-client web view is the same surface used by links such as
-        // Instagram in Big Picture. Keep the external Windows browser only as a
-        // compatibility fallback for older Steam/Decky builds.
         if (typeof nav?.NavigateToSteamWeb === "function") {
             nav.NavigateToSteamWeb(value);
-            try {
-                nav.CloseSideMenus?.();
-            }
-            catch { }
+            closeSideMenusAfterNavigation(win);
             return;
         }
     }
@@ -583,7 +701,7 @@ function openWebsiteInSteam(url) {
         }
     }
     catch { }
-    void rpc("open_external_url", value);
+    void rpc("open_external_url", value).catch((error) => console.warn("[News] Could not open website", error));
 }
 function openArticle(item) {
     // Freeze the identity for this route. Use a resolved publisher URL when cover
@@ -608,7 +726,7 @@ function useBootstrap() {
                     bootstrapUiCache = value;
                     return value;
                 })
-                    .finally(() => { bootstrapLoadPromise = null; });
+                    .finally(() => { window.clearTimeout(timeoutId); bootstrapLoadPromise = null; });
             }
             const value = await bootstrapLoadPromise;
             setBootstrap(value);
@@ -765,6 +883,8 @@ function useNews(tabId, limit = 80, sourceIds = [], reserveFirstWaveSlots = fals
         };
     }, [cacheKey]);
     const enrichMissingImages = useCallback((baseItems, baseErrors) => {
+        if (newsDisposed)
+            return;
         const missing = baseItems
             .map(stabilizeNewsItem)
             .filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image && item.id);
@@ -845,7 +965,7 @@ function useNews(tabId, limit = 80, sourceIds = [], reserveFirstWaveSlots = fals
         };
         let pollCount = 0;
         const poll = async () => {
-            if (generation !== coverPollGenerationRef.current)
+            if (newsDisposed || generation !== coverPollGenerationRef.current)
                 return;
             pollCount += 1;
             const candidates = Array.from(coverQueueRef.current.values());
@@ -856,12 +976,12 @@ function useNews(tabId, limit = 80, sourceIds = [], reserveFirstWaveSlots = fals
             }
             try {
                 const status = await rpc("get_cached_covers", candidates);
-                if (generation !== coverPollGenerationRef.current)
+                if (newsDisposed || generation !== coverPollGenerationRef.current)
                     return;
                 applyStatus(status, candidates);
             }
             catch { }
-            if (generation !== coverPollGenerationRef.current)
+            if (newsDisposed || generation !== coverPollGenerationRef.current)
                 return;
             if (!coverQueueRef.current.size) {
                 coverPollActiveRef.current = false;
@@ -1105,6 +1225,8 @@ function applyPrefetchedTabSnapshot(tabId, items, errors, limit = 120) {
     newsUiCache.set(`${tabId}:30`, { items: stable.slice(0, 30), errors, at: Date.now() });
 }
 async function hydratePrefetchedCoverCaches(tabIds, limit = 120) {
+    if (newsDisposed)
+        return;
     const unique = new Map();
     for (const tabId of tabIds) {
         const snapshot = newsUiCache.get(`${tabId}:${limit}`);
@@ -1145,6 +1267,8 @@ async function hydratePrefetchedCoverCaches(tabIds, limit = 120) {
     }
 }
 async function prefetchNewsTabs(tabs, activeTabId, limit = 120) {
+    if (newsDisposed)
+        return;
     const enabledIds = tabs.filter((tab) => tab.enabled !== false).map((tab) => tab.id).filter(Boolean);
     if (!enabledIds.length)
         return;
@@ -1176,12 +1300,12 @@ async function prefetchNewsTabs(tabs, activeTabId, limit = 120) {
             if (backgroundIds.length) {
                 const hydrateIfCurrent = () => { if (generation === newsConfigGeneration)
                     void hydratePrefetchedCoverCaches(backgroundIds, limit); };
-                window.setTimeout(hydrateIfCurrent, 650);
-                window.setTimeout(hydrateIfCurrent, 1800);
-                window.setTimeout(hydrateIfCurrent, 5200);
-                window.setTimeout(hydrateIfCurrent, 10000);
-                window.setTimeout(hydrateIfCurrent, 20000);
-                window.setTimeout(hydrateIfCurrent, 35000);
+                scheduleNewsTask(hydrateIfCurrent, 650);
+                scheduleNewsTask(hydrateIfCurrent, 1800);
+                scheduleNewsTask(hydrateIfCurrent, 5200);
+                scheduleNewsTask(hydrateIfCurrent, 10000);
+                scheduleNewsTask(hydrateIfCurrent, 20000);
+                scheduleNewsTask(hydrateIfCurrent, 35000);
             }
         }
         catch { }
@@ -1190,6 +1314,8 @@ async function prefetchNewsTabs(tabs, activeTabId, limit = 120) {
     return job;
 }
 async function prefetchNewsTab(tabId, limit = 120) {
+    if (newsDisposed)
+        return;
     const cacheKey = `${tabId || "__all__"}:${limit}`;
     if (!tabId)
         return;
@@ -1205,6 +1331,8 @@ async function prefetchNewsTab(tabId, limit = 120) {
     }
     try {
         const result = await rpc("get_news", tabId, false, limit);
+        if (newsDisposed)
+            return;
         const nextItems = (Array.isArray(result?.items) ? result.items : []).map(stabilizeNewsItem);
         const nextErrors = Array.isArray(result?.errors) ? result.errors : [];
         if (nextItems.length) {
@@ -1781,7 +1909,7 @@ function QamContent() {
         const index = (activeIndex + step + tabs.length) % tabs.length;
         const nextId = tabs[index].id;
         setActiveTabId(nextId);
-        void saveConfigSilent({ ...config, activeTabId: nextId });
+        void saveConfigSilent({ ...config, activeTabId: nextId }).catch((error) => console.warn("[News] Could not save active tab", error));
     };
     if (!bootstrap) {
         if (error) {
@@ -1880,11 +2008,16 @@ function useFullscreenFocusContainment(rootRef) {
         const doc = root.ownerDocument;
         let lastInside = null;
         let restoring = false;
+        let disposed = false;
+        let focusFrame = 0;
+        const owner = doc.defaultView ?? window;
         const focusFallback = () => {
-            if (restoring)
+            if (restoring || disposed)
                 return;
             restoring = true;
-            window.requestAnimationFrame(() => {
+            focusFrame = owner.requestAnimationFrame(() => {
+                if (disposed || !root.isConnected)
+                    return;
                 const fallback = lastInside && root.contains(lastInside) && lastInside.offsetParent !== null ? lastInside : firstVisibleNewsFocusable(root);
                 fallback?.focus?.();
                 restoring = false;
@@ -1908,7 +2041,12 @@ function useFullscreenFocusContainment(rootRef) {
             if (!active || (!root.contains(active) && !isVirtualKeyboardElement(active)))
                 focusFallback();
         }, 60);
-        return () => { window.clearTimeout(timer); doc.removeEventListener("focusin", onFocusIn, true); };
+        return () => {
+            disposed = true;
+            owner.cancelAnimationFrame(focusFrame);
+            window.clearTimeout(timer);
+            doc.removeEventListener("focusin", onFocusIn, true);
+        };
     }, []);
 }
 function FullscreenShell({ children, className = "", style = {} }) {
@@ -1978,7 +2116,7 @@ function EdicolaRoute() {
         const activate = () => {
             setActiveTabId(tab.id);
             scrollRef.current?.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
-            void saveConfigSilent({ ...config, activeTabId: tab.id });
+            void saveConfigSilent({ ...config, activeTabId: tab.id }).catch((error) => console.warn("[News] Could not save active tab", error));
         };
         // Switch immediately. If this tab is not cached, useNews paints each source
         // as it arrives instead of holding the old tab until a full prefetch completes.
@@ -2333,7 +2471,8 @@ function ArticleRoute() {
         const button = event?.detail?.button;
         const gp = GamepadButton;
         const fontDown = matchesAnyGamepadButton(button, gp.BACK, gp.SELECT, gp.VIEW, gp.BUTTON_SELECT);
-        const fontUp = matchesAnyGamepadButton(button, gp.START, gp.OPTIONS, gp.MENU, gp.BUTTON_START);
+        // Steam's OPTIONS is the Y/triangle action (4), not Start/Menu (14).
+        const fontUp = matchesAnyGamepadButton(button, gp.START, gp.MENU, gp.BUTTON_START);
         if (fontDown || fontUp) {
             event?.preventDefault?.();
             event?.stopPropagation?.();
@@ -2618,7 +2757,7 @@ function OnboardingRoute() {
             // This way B/Back returns to the QAM (or to Settings when reconfiguring) instead
             // of reopening the completed wizard.
             goBack();
-            window.setTimeout(() => navigate(EDICOLA_ROUTE), 180);
+            scheduleNewsTask(() => navigate(EDICOLA_ROUTE), 180);
         }
         else
             setMessage(localizeBackendError(result?.error, "saveConfigFailed"));
@@ -3013,7 +3152,7 @@ function SettingsRoute() {
                         SP_REACT.createElement(DialogButton, { style: { ...baseButton, width: 68, minWidth: 68 }, disabled: busy || config.refreshMinutes <= 5, onClick: () => void persist({ ...config, refreshMinutes: Math.max(5, config.refreshMinutes - 5) }) }, "\u2212"),
                         SP_REACT.createElement(DialogButton, { style: { ...baseButton, width: 68, minWidth: 68 }, disabled: busy || config.refreshMinutes >= 180, onClick: () => void persist({ ...config, refreshMinutes: Math.min(180, config.refreshMinutes + 5) }) }, "+")),
                     SP_REACT.createElement(Focusable, { "flow-children": "horizontal", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 8 } },
-                        SP_REACT.createElement(DialogButton, { style: { ...baseButton }, onClick: () => void rpc("clear_cache").then(() => { newsUiCache.clear(); setMessage(tr("cacheCleared")); }) },
+                        SP_REACT.createElement(DialogButton, { style: { ...baseButton }, onClick: () => void rpc("clear_cache").then(() => { newsUiCache.clear(); setMessage(tr("cacheCleared")); }).catch((error) => setMessage(String(error?.message ?? error))) },
                             " ",
                             tr("clearCache")),
                         SP_REACT.createElement(DialogButton, { style: { ...baseButton }, onClick: () => { window.__deckyNewsReconfigure = true; navigate(ONBOARDING_ROUTE); } },
@@ -3289,6 +3428,7 @@ function NewsTitle() {
         SP_REACT.createElement(NewspaperIcon, { size: 20 }));
 }
 export default definePlugin(() => {
+    newsDisposed = false;
     routerHook.addRoute(EDICOLA_ROUTE, EdicolaRoute);
     routerHook.addRoute(ARTICLE_ROUTE, ArticleRoute);
     routerHook.addRoute(ONBOARDING_ROUTE, OnboardingRoute);
@@ -3301,7 +3441,19 @@ export default definePlugin(() => {
         content: SP_REACT.createElement(QamContent, null),
         icon: SP_REACT.createElement(NewspaperIcon, { size: 18 }),
         onDismount() {
-            deactivateChromeSuppression();
+            newsDisposed = true;
+            newsConfigGeneration += 1;
+            backgroundUiTimers.forEach((timer) => window.clearTimeout(timer));
+            backgroundUiTimers.clear();
+            forceRestoreChrome();
+            fullscreenDocuments().forEach((doc) => doc.getElementById(CHROME_STYLE_ID)?.remove());
+            bootstrapUiCache = null;
+            bootstrapLoadPromise = null;
+            newsUiCache.clear();
+            articleUiCache.clear();
+            cardImageMemory.clear();
+            imageEnrichmentInFlight.clear();
+            allTabsPrefetchInFlight.clear();
             routerHook.removeRoute(EDICOLA_ROUTE);
             routerHook.removeRoute(ARTICLE_ROUTE);
             routerHook.removeRoute(ONBOARDING_ROUTE);

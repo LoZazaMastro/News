@@ -91,6 +91,17 @@ declare global {
 // reader back to the Edicola remounts the route; without this cache there is a
 // first render where config/tabs are temporarily empty, which used to flash the
 // impossible "no active tabs" + "preparing" state reported by Andrea.
+let newsDisposed = false;
+const backgroundUiTimers = new Set<number>();
+function scheduleNewsTask(callback: () => void, delay: number) {
+  if (newsDisposed) return;
+  const timer = window.setTimeout(() => {
+    backgroundUiTimers.delete(timer);
+    if (!newsDisposed) callback();
+  }, delay);
+  backgroundUiTimers.add(timer);
+}
+
 let bootstrapUiCache: Bootstrap | null = null;
 let bootstrapLoadPromise: Promise<Bootstrap> | null = null;
 
@@ -240,10 +251,22 @@ function imageLooksLikeHero(candidate?: string, heroSources: string[] = []) {
   });
 }
 
+function callBackend<T = any>(method: string, ...args: any[]): Promise<T> {
+  // A disconnected Decky bridge can throw synchronously, not just reject. Keep
+  // every UI .catch/finally path effective, and stop new requests after unload.
+  try {
+    if (newsDisposed) return Promise.reject(new Error("News has been unloaded"));
+    return Promise.resolve((call as any)(method, ...args)) as Promise<T>;
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 function rpc<T = any>(method: string, ...args: any[]): Promise<T> {
-  const request = (call as any)(method, ...args) as Promise<T>;
+  const request = callBackend<T>(method, ...args);
   if (method !== "save_config") return request;
   return request.then((value: any) => {
+    if (newsDisposed) return value as T;
     if (value?.ok) {
       if (value?.config && bootstrapUiCache) bootstrapUiCache = { ...bootstrapUiCache, config: value.config };
       newsConfigGeneration += 1;
@@ -261,7 +284,7 @@ function saveConfigSilent(config: Config): Promise<any> {
   // article -> Edicola Back) restore the exact active tab without waiting for a
   // fresh bootstrap RPC. The backend result then canonicalizes the cached copy.
   if (bootstrapUiCache) bootstrapUiCache = { ...bootstrapUiCache, config };
-  return ((call as any)("save_config", config) as Promise<any>).then((value: any) => {
+  return callBackend("save_config", config).then((value: any) => {
     if (value?.ok && value?.config && bootstrapUiCache) bootstrapUiCache = { ...bootstrapUiCache, config: value.config };
     return value;
   });
@@ -290,8 +313,39 @@ function nextId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function steamRouter(): any {
+  // Steam exposes this store directly in the supplied September 2026 bundle.
+  // It also avoids a hard dependency on DFL's historical module signature.
+  return (window as any).SteamUIStore ?? Router;
+}
+
+function steamWindows(store: any): any[] {
+  try {
+    const windows = store?.SteamUIWindows;
+    return Array.isArray(windows) ? windows : windows?.values ? Array.from(windows.values()) : [];
+  } catch { return []; }
+}
+
 function mainWindow(): any {
-  return (Router as any)?.WindowStore?.GamepadUIMainWindowInstance ?? (Router as any)?.WindowStore?.SteamUIWindows?.[0];
+  const router = steamRouter();
+  const store = router?.WindowStore ?? (Router as any)?.WindowStore;
+  const ready = (candidate: any) => {
+    try { return candidate && typeof candidate.Navigate === "function" &&
+      (typeof candidate.BCanNavigate !== "function" || candidate.BCanNavigate()); }
+    catch { return false; }
+  };
+  const main = store?.GamepadUIMainWindowInstance;
+  if (ready(main)) return main;
+  const windows = steamWindows(store);
+  const gamepad = windows.find((candidate) => {
+    try { return candidate?.IsGamepadUIWindow?.() && ready(candidate); } catch { return false; }
+  });
+  if (gamepad) return gamepad;
+  try {
+    const focused = router?.GetFocusedWindowInstance?.();
+    if (ready(focused)) return focused;
+  } catch {}
+  return windows.find(ready);
 }
 
 let chromeObservers: MutationObserver[] = [];
@@ -336,9 +390,9 @@ function fullscreenDocuments(): Document[] {
   try { add(window.top?.document); } catch {}
   try { add(window.parent?.document); } catch {}
   try { add(window.opener?.document); } catch {}
-  const store = (Router as any)?.WindowStore;
+  const store = steamRouter()?.WindowStore ?? (Router as any)?.WindowStore;
   addWin(store?.GamepadUIMainWindowInstance);
-  if (Array.isArray(store?.SteamUIWindows)) store.SteamUIWindows.forEach(addWin);
+  steamWindows(store).forEach(addWin);
   return result;
 }
 
@@ -398,7 +452,12 @@ function isVirtualKeyboardElement(element: HTMLElement | null): boolean {
   return false;
 }
 
+const chromeInlineStyles = new Map<HTMLElement, { name: string; value: string; priority: string }[]>();
 function hideChromeElement(element: HTMLElement) {
+  if (!chromeInlineStyles.has(element)) {
+    chromeInlineStyles.set(element, ["display", "opacity", "visibility", "pointer-events", "transition", "animation"]
+      .map((name) => ({ name, value: element.style.getPropertyValue(name), priority: element.style.getPropertyPriority(name) })));
+  }
   element.dataset.newsFullscreenChrome = "true";
   element.style.setProperty("display", "none", "important");
   element.style.setProperty("opacity", "0", "important");
@@ -429,6 +488,7 @@ function markChrome(doc: Document) {
 }
 
 function markAllChrome() {
+  if (newsDisposed) return;
   fullscreenDocuments().forEach((doc) => {
     ensureChromeStyle(doc);
     doc.documentElement.classList.add(ROOT_CLASS);
@@ -482,11 +542,15 @@ function deactivateChromeSuppression() {
   fullscreenDocuments().forEach((doc) => {
     doc.documentElement.classList.remove(ROOT_CLASS);
     doc.body?.classList.remove(ROOT_CLASS);
-    doc.querySelectorAll<HTMLElement>('[data-news-fullscreen-chrome="true"]').forEach((element) => {
-      delete element.dataset.newsFullscreenChrome;
-      ["display", "opacity", "visibility", "pointer-events", "transition", "animation"].forEach((name) => element.style.removeProperty(name));
+  });
+  chromeInlineStyles.forEach((properties, element) => {
+    delete element.dataset.newsFullscreenChrome;
+    properties.forEach(({ name, value, priority }) => {
+      if (value) element.style.setProperty(name, value, priority);
+      else element.style.removeProperty(name);
     });
   });
+  chromeInlineStyles.clear();
 }
 
 function retainChromeSuppression() {
@@ -535,23 +599,43 @@ function useFullscreenChrome() {
   }, []);
 }
 
+function closeSideMenusAfterNavigation(win: any) {
+  // Decky's Navigation contract requires closing AFTER navigating; closing first
+  // can hide the Big Picture overlay during the route transition on Windows.
+  try {
+    if (typeof win?.MenuStore?.CloseSideMenus === "function") win.MenuStore.CloseSideMenus();
+    else Navigation?.CloseSideMenus?.();
+  } catch {}
+}
+
 function navigate(path: string) {
+  if (newsDisposed) return;
   holdChromeForTransition();
-  markAllChrome();
-  try { Navigation.CloseSideMenus(); } catch {}
   const win = mainWindow();
-  if (win?.Navigate) win.Navigate(path);
-  else Navigation.Navigate(path);
-  markAllChrome();
-  queueMicrotask(markAllChrome);
-  window.requestAnimationFrame(markAllChrome);
+  try {
+    if (typeof win?.Navigate === "function") win.Navigate(path);
+    else if (typeof Navigation?.Navigate === "function") Navigation.Navigate(path);
+    else throw new Error("Steam navigation is unavailable");
+    closeSideMenusAfterNavigation(win);
+    markAllChrome();
+    queueMicrotask(markAllChrome);
+    scheduleChromeMark();
+  } catch (error) {
+    forceRestoreChrome();
+    console.warn("[News] Could not open route", path, error);
+  }
 }
 
 function goBack() {
   const win = mainWindow();
-  if (win?.NavigateBack) win.NavigateBack();
-  else Navigation.NavigateBack();
-  [0, 60, 180, 420, 900].forEach((delay) => window.setTimeout(() => {
+  try {
+    if (typeof win?.NavigateBack === "function") win.NavigateBack();
+    else Navigation?.NavigateBack?.();
+  } catch (error) {
+    console.warn("[News] Could not navigate back", error);
+    forceRestoreChrome();
+  }
+  [0, 60, 180, 420, 900].forEach((delay) => scheduleNewsTask(() => {
     const anyRoot = fullscreenDocuments().some((doc) => Boolean(doc.querySelector(".newsFullscreenRoot")));
     if (!anyRoot) forceRestoreChrome(); else markAllChrome();
   }, delay));
@@ -560,14 +644,26 @@ function goBack() {
 function openWebsiteInSteam(url: string) {
   const value = String(url || "").trim();
   if (!/^https?:\/\//i.test(value)) return;
-  const nav: any = Navigation as any;
+  const win = mainWindow();
   try {
-    // Steam's own in-client web view is the same surface used by links such as
-    // Instagram in Big Picture. Keep the external Windows browser only as a
-    // compatibility fallback for older Steam/Decky builds.
+    // NavigateToSteamWeb is a WindowInstance method in the supplied Steam UI;
+    // DFL's wrapper can exist but silently fail to find the correct window.
+    if (typeof win?.NavigateToSteamWeb === "function") {
+      win.NavigateToSteamWeb(value);
+      closeSideMenusAfterNavigation(win);
+      return;
+    }
+    if (typeof win?.Navigator?.SteamWeb === "function") {
+      win.Navigator.SteamWeb(value);
+      closeSideMenusAfterNavigation(win);
+      return;
+    }
+  } catch {}
+  const nav: any = Navigation;
+  try {
     if (typeof nav?.NavigateToSteamWeb === "function") {
       nav.NavigateToSteamWeb(value);
-      try { nav.CloseSideMenus?.(); } catch {}
+      closeSideMenusAfterNavigation(win);
       return;
     }
   } catch {}
@@ -577,7 +673,7 @@ function openWebsiteInSteam(url: string) {
       return;
     }
   } catch {}
-  void rpc("open_external_url", value);
+  void rpc("open_external_url", value).catch((error) => console.warn("[News] Could not open website", error));
 }
 
 function openArticle(item: NewsItem) {
@@ -604,7 +700,7 @@ function useBootstrap() {
             bootstrapUiCache = value;
             return value;
           })
-          .finally(() => { bootstrapLoadPromise = null; });
+          .finally(() => { window.clearTimeout(timeoutId); bootstrapLoadPromise = null; });
       }
       const value = await bootstrapLoadPromise;
       setBootstrap(value);
@@ -761,6 +857,7 @@ function useNews(tabId: string, limit = 80, sourceIds: string[] = [], reserveFir
   }, [cacheKey]);
 
   const enrichMissingImages = useCallback((baseItems: NewsItem[], baseErrors: any[]) => {
+    if (newsDisposed) return;
     const missing = baseItems
       .map(stabilizeNewsItem)
       .filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image && item.id);
@@ -841,7 +938,7 @@ function useNews(tabId: string, limit = 80, sourceIds: string[] = [], reserveFir
 
     let pollCount = 0;
     const poll = async () => {
-      if (generation !== coverPollGenerationRef.current) return;
+      if (newsDisposed || generation !== coverPollGenerationRef.current) return;
       pollCount += 1;
       const candidates = Array.from(coverQueueRef.current.values());
       if (!candidates.length) {
@@ -851,10 +948,10 @@ function useNews(tabId: string, limit = 80, sourceIds: string[] = [], reserveFir
       }
       try {
         const status = await rpc<any>("get_cached_covers", candidates);
-        if (generation !== coverPollGenerationRef.current) return;
+        if (newsDisposed || generation !== coverPollGenerationRef.current) return;
         applyStatus(status, candidates);
       } catch {}
-      if (generation !== coverPollGenerationRef.current) return;
+      if (newsDisposed || generation !== coverPollGenerationRef.current) return;
       if (!coverQueueRef.current.size) {
         coverPollActiveRef.current = false;
         coverPollTimerRef.current = 0;
@@ -1078,6 +1175,7 @@ function applyPrefetchedTabSnapshot(tabId: string, items: NewsItem[], errors: an
 }
 
 async function hydratePrefetchedCoverCaches(tabIds: string[], limit = 120) {
+  if (newsDisposed) return;
   const unique = new Map<string, NewsItem>();
   for (const tabId of tabIds) {
     const snapshot = newsUiCache.get(`${tabId}:${limit}`);
@@ -1111,6 +1209,7 @@ async function hydratePrefetchedCoverCaches(tabIds: string[], limit = 120) {
 }
 
 async function prefetchNewsTabs(tabs: NewsTab[], activeTabId: string, limit = 120) {
+  if (newsDisposed) return;
   const enabledIds = tabs.filter((tab) => tab.enabled !== false).map((tab) => tab.id).filter(Boolean);
   if (!enabledIds.length) return;
   const tabSignature = tabs.filter((tab) => tab.enabled !== false).map((tab) => `${tab.id}:${tab.category||""}:${(tab.sourceIds||[]).join(",")}`).join("|");
@@ -1137,12 +1236,12 @@ async function prefetchNewsTabs(tabs: NewsTab[], activeTabId: string, limit = 12
       const backgroundIds = enabledIds.filter((id) => id !== activeTabId);
       if (backgroundIds.length) {
         const hydrateIfCurrent = () => { if (generation === newsConfigGeneration) void hydratePrefetchedCoverCaches(backgroundIds, limit); };
-        window.setTimeout(hydrateIfCurrent, 650);
-        window.setTimeout(hydrateIfCurrent, 1800);
-        window.setTimeout(hydrateIfCurrent, 5200);
-        window.setTimeout(hydrateIfCurrent, 10000);
-        window.setTimeout(hydrateIfCurrent, 20000);
-        window.setTimeout(hydrateIfCurrent, 35000);
+        scheduleNewsTask(hydrateIfCurrent, 650);
+        scheduleNewsTask(hydrateIfCurrent, 1800);
+        scheduleNewsTask(hydrateIfCurrent, 5200);
+        scheduleNewsTask(hydrateIfCurrent, 10000);
+        scheduleNewsTask(hydrateIfCurrent, 20000);
+        scheduleNewsTask(hydrateIfCurrent, 35000);
       }
     } catch {}
   })().finally(() => allTabsPrefetchInFlight.delete(key));
@@ -1151,6 +1250,7 @@ async function prefetchNewsTabs(tabs: NewsTab[], activeTabId: string, limit = 12
 }
 
 async function prefetchNewsTab(tabId: string, limit = 120) {
+  if (newsDisposed) return;
   const cacheKey = `${tabId || "__all__"}:${limit}`;
   if (!tabId) return;
   const warmCovers = (items: NewsItem[]) => {
@@ -1164,6 +1264,7 @@ async function prefetchNewsTab(tabId: string, limit = 120) {
   }
   try {
     const result = await rpc<any>("get_news", tabId, false, limit);
+    if (newsDisposed) return;
     const nextItems = (Array.isArray(result?.items) ? result.items : []).map(stabilizeNewsItem);
     const nextErrors = Array.isArray(result?.errors) ? result.errors : [];
     if (nextItems.length) {
@@ -1650,7 +1751,7 @@ function QamContent() {
     const index = (activeIndex + step + tabs.length) % tabs.length;
     const nextId = tabs[index].id;
     setActiveTabId(nextId);
-    void saveConfigSilent({ ...config, activeTabId: nextId });
+    void saveConfigSilent({ ...config, activeTabId: nextId }).catch((error) => console.warn("[News] Could not save active tab", error));
   };
 
   if (!bootstrap) {
@@ -1768,10 +1869,14 @@ function useFullscreenFocusContainment(rootRef: any) {
     const doc = root.ownerDocument;
     let lastInside: HTMLElement | null = null;
     let restoring = false;
+    let disposed = false;
+    let focusFrame = 0;
+    const owner = doc.defaultView ?? window;
     const focusFallback = () => {
-      if (restoring) return;
+      if (restoring || disposed) return;
       restoring = true;
-      window.requestAnimationFrame(() => {
+      focusFrame = owner.requestAnimationFrame(() => {
+        if (disposed || !root.isConnected) return;
         const fallback = lastInside && root.contains(lastInside) && lastInside.offsetParent !== null ? lastInside : firstVisibleNewsFocusable(root);
         fallback?.focus?.();
         restoring = false;
@@ -1789,7 +1894,12 @@ function useFullscreenFocusContainment(rootRef: any) {
       const active = doc.activeElement as HTMLElement | null;
       if (!active || (!root.contains(active) && !isVirtualKeyboardElement(active))) focusFallback();
     }, 60);
-    return () => { window.clearTimeout(timer); doc.removeEventListener("focusin", onFocusIn, true); };
+    return () => {
+      disposed = true;
+      owner.cancelAnimationFrame(focusFrame);
+      window.clearTimeout(timer);
+      doc.removeEventListener("focusin", onFocusIn, true);
+    };
   }, []);
 }
 
@@ -1865,7 +1975,7 @@ function EdicolaRoute() {
     const activate = () => {
       setActiveTabId(tab.id);
       scrollRef.current?.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
-      void saveConfigSilent({ ...config, activeTabId: tab.id });
+      void saveConfigSilent({ ...config, activeTabId: tab.id }).catch((error) => console.warn("[News] Could not save active tab", error));
     };
     // Switch immediately. If this tab is not cached, useNews paints each source
     // as it arrives instead of holding the old tab until a full prefetch completes.
@@ -2161,7 +2271,8 @@ function ArticleRoute() {
     const button = event?.detail?.button;
     const gp: any = GamepadButton as any;
     const fontDown = matchesAnyGamepadButton(button, gp.BACK, gp.SELECT, gp.VIEW, gp.BUTTON_SELECT);
-    const fontUp = matchesAnyGamepadButton(button, gp.START, gp.OPTIONS, gp.MENU, gp.BUTTON_START);
+    // Steam's OPTIONS is the Y/triangle action (4), not Start/Menu (14).
+    const fontUp = matchesAnyGamepadButton(button, gp.START, gp.MENU, gp.BUTTON_START);
     if (fontDown || fontUp) {
       event?.preventDefault?.();
       event?.stopPropagation?.();
@@ -2410,7 +2521,7 @@ function OnboardingRoute() {
       // This way B/Back returns to the QAM (or to Settings when reconfiguring) instead
       // of reopening the completed wizard.
       goBack();
-      window.setTimeout(() => navigate(EDICOLA_ROUTE), 180);
+      scheduleNewsTask(() => navigate(EDICOLA_ROUTE), 180);
     } else setMessage(localizeBackendError(result?.error, "saveConfigFailed"));
   };
 
@@ -2722,7 +2833,7 @@ function SettingsRoute() {
               <DialogButton style={{ ...baseButton, width: 68, minWidth: 68 }} disabled={busy || config.refreshMinutes >= 180} onClick={() => void persist({ ...config, refreshMinutes: Math.min(180, config.refreshMinutes + 5) })}>+</DialogButton>
             </Focusable>
             <Focusable flow-children="horizontal" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 8 }}>
-              <DialogButton style={{ ...baseButton }} onClick={() => void rpc("clear_cache").then(() => { newsUiCache.clear(); setMessage(tr("cacheCleared")); })}> {tr("clearCache")}</DialogButton>
+              <DialogButton style={{ ...baseButton }} onClick={() => void rpc("clear_cache").then(() => { newsUiCache.clear(); setMessage(tr("cacheCleared")); }).catch((error) => setMessage(String(error?.message ?? error)))}> {tr("clearCache")}</DialogButton>
               <DialogButton style={{ ...baseButton }} onClick={() => { window.__deckyNewsReconfigure = true; navigate(ONBOARDING_ROUTE); }}> {tr("repeatSetup")}</DialogButton>
             </Focusable>
           </section>
@@ -2963,6 +3074,7 @@ function NewsTitle() {
 }
 
 export default definePlugin(() => {
+  newsDisposed = false;
   routerHook.addRoute(EDICOLA_ROUTE, EdicolaRoute);
   routerHook.addRoute(ARTICLE_ROUTE, ArticleRoute);
   routerHook.addRoute(ONBOARDING_ROUTE, OnboardingRoute);
@@ -2975,7 +3087,19 @@ export default definePlugin(() => {
     content: <QamContent />,
     icon: <NewspaperIcon size={18} />,
     onDismount() {
-      deactivateChromeSuppression();
+      newsDisposed = true;
+      newsConfigGeneration += 1;
+      backgroundUiTimers.forEach((timer) => window.clearTimeout(timer));
+      backgroundUiTimers.clear();
+      forceRestoreChrome();
+      fullscreenDocuments().forEach((doc) => doc.getElementById(CHROME_STYLE_ID)?.remove());
+      bootstrapUiCache = null;
+      bootstrapLoadPromise = null;
+      newsUiCache.clear();
+      articleUiCache.clear();
+      cardImageMemory.clear();
+      imageEnrichmentInFlight.clear();
+      allTabsPrefetchInFlight.clear();
       routerHook.removeRoute(EDICOLA_ROUTE);
       routerHook.removeRoute(ARTICLE_ROUTE);
       routerHook.removeRoute(ONBOARDING_ROUTE);

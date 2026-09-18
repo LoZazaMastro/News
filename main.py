@@ -3,19 +3,17 @@ import base64
 import hashlib
 import html
 import http.cookiejar
-import http.server
 import json
-import mimetypes
 import os
 import re
 import secrets
 import shutil
+import socket
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -1730,81 +1728,183 @@ def _default_config() -> Dict[str, Any]:
 
 
 class NewsImageCacheServer:
+    """Small, bounded loopback image server for Decky's bundled Python runtime.
+
+    Some Windows loader builds omit http.server/socketserver/mimetypes. Use the
+    socket/threading primitives already needed by Decky instead of importing
+    these optional modules, adding a dependency or modifying the loader.
+    Only immutable, validated cache image names are exposed; never a directory.
+    """
+
+    MIME_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                  "webp": "image/webp", "gif": "image/gif", "avif": "image/avif"}
+    MAX_CLIENTS = 12
+    MAX_HEADERS = 16 * 1024
+    CLIENT_TIMEOUT = 4.0
+
     def __init__(self, root: Path, log) -> None:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self._log = log
-        self.token = secrets.token_hex(10)
+        self.token = secrets.token_hex(16)
         self.port = 0
         self._server = None
         self._thread = None
+        self._pool = None
+        self._stopping = threading.Event()
+        self._clients = set()
+        self._clients_lock = threading.Lock()
+        self._slots = threading.BoundedSemaphore(self.MAX_CLIENTS)
 
     def start(self) -> None:
         if self._server is not None:
             return
-        parent = self
-
-        class Handler(http.server.BaseHTTPRequestHandler):
-            def log_message(self, *args, **kwargs):
-                return
-
-            def _cors(self) -> None:
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.send_header("Cache-Control", "public, max-age=604800, immutable")
-
-            def do_HEAD(self):
-                self._serve(False)
-
-            def do_GET(self):
-                self._serve(True)
-
-            def _serve(self, include_body: bool) -> None:
-                try:
-                    parsed = urllib.parse.urlparse(self.path)
-                    prefix = f"/{parent.token}/image/"
-                    if not parsed.path.startswith(prefix):
-                        self.send_error(404)
-                        return
-                    name = urllib.parse.unquote(parsed.path[len(prefix):])
-                    if not re.fullmatch(r"(?:[A-Fa-f0-9]{40}\.(?:jpg|jpeg|png|webp|gif|avif)|asset-[a-z0-9][a-z0-9-]*\.png)", name):
-                        self.send_error(404)
-                        return
-                    path = (parent.root / name).resolve()
-                    if parent.root.resolve() not in path.parents or not path.is_file():
-                        self.send_error(404)
-                        return
-                    size = path.stat().st_size
-                    mime = mimetypes.guess_type(str(path))[0] or "image/jpeg"
-                    self.send_response(200)
-                    self._cors()
-                    self.send_header("Content-Type", mime)
-                    self.send_header("Content-Length", str(size))
-                    self.end_headers()
-                    if include_body:
-                        with path.open("rb") as handle:
-                            while True:
-                                chunk = handle.read(128 * 1024)
-                                if not chunk:
-                                    break
-                                self.wfile.write(chunk)
-                except (BrokenPipeError, ConnectionResetError):
-                    return
-                except Exception as exc:
-                    try:
-                        parent._log(f"image cache server error: {exc}")
-                    except Exception:
-                        pass
-                    try:
-                        self.send_error(500)
-                    except Exception:
-                        pass
-
-        self._server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self._server.daemon_threads = True
-        self.port = int(self._server.server_address[1])
-        self._thread = threading.Thread(target=self._server.serve_forever, name="News-ImageCache", daemon=True)
-        self._thread.start()
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pool = None
+        try:
+            server.bind(("127.0.0.1", 0))
+            server.listen(self.MAX_CLIENTS)
+            server.settimeout(0.2)
+            pool = ThreadPoolExecutor(max_workers=self.MAX_CLIENTS,
+                                      thread_name_prefix="NewsImageHTTP")
+            self._stopping.clear()
+            self._pool = pool
+            self._server = server
+            self.port = int(server.getsockname()[1])
+            self._thread = threading.Thread(target=self._accept, args=(server, pool),
+                                            name="News-ImageCache", daemon=True)
+            self._thread.start()
+        except Exception:
+            server.close()
+            if pool is not None:
+                pool.shutdown(wait=False, cancel_futures=True)
+            self._server = self._pool = self._thread = None
+            self.port = 0
+            raise
         self._log(f"image cache ready on 127.0.0.1:{self.port}")
+
+    def _accept(self, server, pool) -> None:
+        while not self._stopping.is_set():
+            try:
+                client, _address = server.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                if not self._stopping.is_set():
+                    self._log("image cache listener closed unexpectedly")
+                break
+            if self._stopping.is_set() or not self._slots.acquire(blocking=False):
+                client.close()
+                continue
+            with self._clients_lock:
+                self._clients.add(client)
+            try:
+                pool.submit(self._serve, client)
+            except RuntimeError:
+                self._release_client(client)
+
+    def _release_client(self, client) -> None:
+        try:
+            client.close()
+        finally:
+            with self._clients_lock:
+                self._clients.discard(client)
+            self._slots.release()
+
+    @staticmethod
+    def _headers(client, status: int, length: int = 0, mime: str = "text/plain",
+                 cache: bool = False, extra: str = "") -> None:
+        reason = {200: "OK", 204: "No Content", 400: "Bad Request", 404: "Not Found",
+                  405: "Method Not Allowed", 431: "Request Header Fields Too Large"}[status]
+        headers = (f"HTTP/1.1 {status} {reason}\r\n"
+                   f"Content-Type: {mime}\r\nContent-Length: {length}\r\n"
+                   "Connection: close\r\nAccess-Control-Allow-Origin: *\r\n"
+                   "Cross-Origin-Resource-Policy: cross-origin\r\n"
+                   "X-Content-Type-Options: nosniff\r\n"
+                   + ("Cache-Control: public, max-age=604800, immutable\r\n" if cache
+                      else "Cache-Control: no-store\r\n") + extra + "\r\n")
+        client.sendall(headers.encode("ascii"))
+
+    def _serve(self, client) -> None:
+        try:
+            client.settimeout(self.CLIENT_TIMEOUT)
+            request = bytearray()
+            deadline = time.monotonic() + self.CLIENT_TIMEOUT
+            while b"\r\n\r\n" not in request:
+                if len(request) >= self.MAX_HEADERS:
+                    self._headers(client, 431)
+                    return
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return
+                client.settimeout(remaining)
+                chunk = client.recv(min(4096, self.MAX_HEADERS - len(request)))
+                if not chunk:
+                    return
+                request.extend(chunk)
+            client.settimeout(self.CLIENT_TIMEOUT)
+            line = bytes(request).split(b"\r\n", 1)[0].decode("ascii", "strict")
+            parts = line.split(" ")
+            if len(parts) != 3 or parts[2] not in ("HTTP/1.0", "HTTP/1.1"):
+                self._headers(client, 400)
+                return
+            method, target, _version = parts
+            if method not in ("GET", "HEAD", "OPTIONS"):
+                self._headers(client, 405, extra="Allow: GET, HEAD, OPTIONS\r\n")
+                return
+            # Accept origin-form only. Do not act as a proxy, serve arbitrary
+            # paths, decode slash escapes into a filesystem path or follow links
+            # outside the cache directory.
+            prefix = f"/{self.token}/image/"
+            target_path = target.split("?", 1)[0]
+            if not target_path.startswith(prefix):
+                self._headers(client, 404)
+                return
+            name = urllib.parse.unquote(target_path[len(prefix):])
+            if not re.fullmatch(r"(?:[A-Fa-f0-9]{40}\.(?:jpg|jpeg|png|webp|gif|avif)|asset-[a-z0-9][a-z0-9-]*\.png)", name):
+                self._headers(client, 404)
+                return
+            path = (self.root / name).resolve()
+            if self.root.resolve() not in path.parents or not path.is_file():
+                self._headers(client, 404)
+                return
+            if method == "OPTIONS":
+                self._headers(client, 204, extra="Access-Control-Allow-Methods: GET, HEAD, OPTIONS\r\n"
+                              "Access-Control-Allow-Headers: Content-Type\r\n"
+                              "Access-Control-Max-Age: 600\r\n")
+                return
+            try:
+                handle = path.open("rb")
+            except (FileNotFoundError, PermissionError):
+                self._headers(client, 404)
+                return
+            with handle:
+                size = os.fstat(handle.fileno()).st_size
+                if size > MAX_IMAGE_BYTES:
+                    self._headers(client, 404)
+                    return
+                mime = self.MIME_TYPES.get(path.suffix[1:].lower(), "image/jpeg")
+                self._headers(client, 200, size, mime, cache=True)
+                if method == "GET":
+                    while not self._stopping.is_set():
+                        chunk = handle.read(128 * 1024)
+                        if not chunk:
+                            break
+                        client.sendall(chunk)
+        except (ConnectionError, socket.timeout, OSError):
+            # The browser routinely cancels artwork loads during navigation and
+            # plugin reloads (including Windows WinError 64/10054). These are
+            # local image connections, NOT Decky's RPC socket.
+            return
+        except (UnicodeError, ValueError):
+            try:
+                self._headers(client, 400)
+            except OSError:
+                pass
+        except Exception as exc:
+            self._log(f"image cache request error: {exc}")
+        finally:
+            self._release_client(client)
 
     @property
     def base_url(self) -> str:
@@ -1814,23 +1914,37 @@ class NewsImageCacheServer:
         return f"{self.base_url}/image/{urllib.parse.quote(filename, safe='')}" if self.base_url and filename else ""
 
     def stop(self) -> None:
-        server = self._server
-        self._server = None
-        if server is None:
-            return
-        try:
-            server.shutdown()
-        except Exception:
-            pass
-        try:
-            server.server_close()
-        except Exception:
-            pass
+        self._stopping.set()
+        server, self._server = self._server, None
         self.port = 0
+        if server is not None:
+            try:
+                server.close()
+            except OSError:
+                pass
+        thread, self._thread = self._thread, None
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=1.0)
+        with self._clients_lock:
+            clients = list(self._clients)
+        for client in clients:
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            client.close()
+        pool, self._pool = self._pool, None
+        if pool is not None:
+            # All reads/writes have been interrupted above. Draining submitted
+            # handlers releases their slots before the server can be restarted.
+            pool.shutdown(wait=True)
 
 
 class Plugin:
     def __init__(self) -> None:
+        self._stopping = threading.Event()
+        self._background_timers: set[threading.Timer] = set()
+        self._background_timers_lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=10, thread_name_prefix="DeckyNews")
         # Background tab warming fetches unique publishers concurrently without
         # occupying the active-tab/source RPC path. Network I/O benefits from a
@@ -2245,6 +2359,25 @@ class Plugin:
         except Exception:
             return value, ""
 
+    def _schedule_background(self, delay: float, callback) -> None:
+        """Track and cancel every delayed task owned by this plugin instance."""
+        if self._stopping.is_set():
+            return
+        def run() -> None:
+            try:
+                if not self._stopping.is_set():
+                    callback()
+            finally:
+                with self._background_timers_lock:
+                    self._background_timers.discard(timer)
+        timer = threading.Timer(max(0.0, delay), run)
+        timer.daemon = True
+        with self._background_timers_lock:
+            if self._stopping.is_set():
+                return
+            self._background_timers.add(timer)
+            timer.start()
+
     def _schedule_image_cache_warm(self, image_url: str, referer: str, cache_key: str, delay_seconds: float = 6.0) -> None:
         """Cache a discovered cover only after the browser has had first dibs.
 
@@ -2257,6 +2390,8 @@ class Plugin:
         value = str(image_url or "").strip()
         if not value.startswith(("http://", "https://")):
             return
+        if self._stopping.is_set():
+            return
         token = f"{cache_key}|{value}"
         with self._image_cache_warm_lock:
             if token in self._image_cache_warm_inflight:
@@ -2265,6 +2400,8 @@ class Plugin:
 
         def task() -> None:
             try:
+                if self._stopping.is_set():
+                    return
                 _local, filename = self._cache_remote_image_sync(value, referer)
                 self._write_image_cache(cache_key, value, filename)
             finally:
@@ -2273,6 +2410,8 @@ class Plugin:
 
         def submit_later() -> None:
             try:
+                if self._stopping.is_set():
+                    return
                 self._image_executor.submit(task)
             except Exception:
                 with self._image_cache_warm_lock:
@@ -2282,9 +2421,7 @@ class Plugin:
         if delay <= 0:
             submit_later()
             return
-        timer = threading.Timer(delay, submit_later)
-        timer.daemon = True
-        timer.start()
+        self._schedule_background(delay, submit_later)
 
     def _title_match_key(self, value: str) -> str:
         # Unicode-aware normalization: keep accented letters instead of deleting
@@ -2778,6 +2915,8 @@ class Plugin:
                 pass
 
     def _schedule_ilpost_fresh_prefetch(self, items: List[Dict[str, Any]]) -> None:
+        if self._stopping.is_set():
+            return
         candidates = [item for item in items if isinstance(item, dict) and _is_google_news_url(str(item.get("url") or ""))]
         candidates.sort(key=lambda item: int(item.get("published") or 0), reverse=True)
         sample = candidates[:8]
@@ -2800,15 +2939,13 @@ class Plugin:
         # A freshly published Google wrapper can need a short moment before its
         # decoder shell becomes usable. Retry twice without blocking the UI/feed.
         for delay in (12.0, 32.0):
-            timer = threading.Timer(delay, lambda values=[dict(item) for item in payload]: self._ilpost_fresh_prefetch_sync(values))
-            timer.daemon = True
-            try:
-                timer.start()
-                with self._ilpost_fresh_prefetch_lock:
-                    self._ilpost_fresh_timers = [old for old in self._ilpost_fresh_timers if old.is_alive()]
-                    self._ilpost_fresh_timers.append(timer)
-            except Exception:
-                pass
+            def retry(values=[dict(item) for item in payload]) -> None:
+                if not self._stopping.is_set():
+                    try:
+                        self._prefetch_executor.submit(self._ilpost_fresh_prefetch_sync, values)
+                    except RuntimeError:
+                        pass
+            self._schedule_background(delay, retry)
 
     def _resolve_ilpost_item_sync(self, item: Dict[str, Any]) -> str:
         target = str(item.get("url") or "").strip()
@@ -5315,6 +5452,7 @@ class Plugin:
                 self._foreground_browser_windows_sync()
             return opened
         try:
+            import webbrowser
             return bool(webbrowser.open(value))
         except Exception:
             return False
@@ -5361,9 +5499,15 @@ class Plugin:
         except Exception as exc:
             self._log(f"image cache server unavailable: {exc}")
         self._load_assets()
-        self._log("News 1.0.0 loaded")
+        self._log("News 1.0.1 loaded")
 
     async def _unload(self) -> None:
+        self._stopping.set()
+        with self._background_timers_lock:
+            pending_timers = list(self._background_timers)
+            self._background_timers.clear()
+        for timer in pending_timers:
+            timer.cancel()
         try:
             with self._ilpost_fresh_prefetch_lock:
                 timers = list(self._ilpost_fresh_timers)
@@ -5376,7 +5520,7 @@ class Plugin:
         except Exception:
             pass
         try:
-            self._image_server.stop()
+            await asyncio.to_thread(self._image_server.stop)
         except Exception:
             pass
         try:
