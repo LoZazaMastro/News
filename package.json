@@ -1,6 +1,6 @@
 {
   "name": "decky-news",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A gamepad-first news reader and fullscreen Edicola for Decky Loader.",
   "author": "LoZazaMastro",
   "type": "module",

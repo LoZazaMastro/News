@@ -1,4 +1,4 @@
-// News 1.0.1 — generated from src/index.tsx; do not edit dist by hand.
+// News 1.0.2 — generated from src/index.tsx; do not edit dist by hand.
 const manifest = {"name":"News"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
