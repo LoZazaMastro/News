@@ -1,4 +1,4 @@
-"""Offline News 1.0.1 regressions; no Steam/Decky installation is required.
+"""Offline News regressions; no Steam/Decky installation is required.
 Run: python scripts/runtime_regression.py
 """
 import asyncio
@@ -18,7 +18,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMP = tempfile.TemporaryDirectory(prefix="news-101-tests-")
+TEMP = tempfile.TemporaryDirectory(prefix="news-runtime-tests-")
 BASE = Path(TEMP.name)
 LOGS = []
 stub = types.ModuleType("decky_plugin")
@@ -205,7 +205,8 @@ class LifecycleTests(unittest.TestCase):
                 self.assertTrue(result["ok"])
                 self.assertTrue(result["countries"])
                 self.assertTrue(plugin._image_server.port)
-                self.assertTrue(any("News 1.0.1 loaded" in line for line in LOGS))
+                version = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
+                self.assertTrue(any(f"News {version} loaded" in line for line in LOGS))
             finally:
                 await plugin._unload()
         asyncio.run(exercise())

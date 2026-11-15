@@ -5815,7 +5815,7 @@ class Plugin:
         except Exception as exc:
             self._log(f"image cache server unavailable: {exc}")
         self._load_assets()
-        self._log("News 1.0.1 loaded")
+        self._log("News 1.0.2 loaded")
 
     async def _unload(self) -> None:
         self._stopping.set()

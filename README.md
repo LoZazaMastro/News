@@ -45,9 +45,9 @@ You can paste the home page of a news outlet, a direct RSS/Atom feed, or a recog
 
 Images are crawled from the page, structured data, and the article body, discarding icons, avatars, and logos that are too small. Resolved assets are cached locally to avoid repeated requests and loading times during navigation.
 
-## Publisher-specific metadata-only handling (development)
+## Publisher-specific metadata-only handling
 
-This branch adds a package-owned `metadata_only` policy for sources whose approved display is limited to the original headline, publication name, date, publisher-supplied short description and original article link. It does not change the default Reader behavior of other sources.
+News 1.0.2 adds a package-owned `metadata_only` policy for sources whose approved display is limited to the original headline, publication name, date, publisher-supplied short description and original article link. It does not change the default Reader behavior of other sources.
 
 For a restricted source:
 
@@ -57,7 +57,7 @@ For a restricted source:
 - Persistent feed caches contain only these display fields plus necessary item/source identifiers, policy version and cache timing. Older incompatible caches are rejected, restricted Reader/cover records are purged when encountered, and expired metadata is not reused as an offline fallback. Image and Reader RPCs independently enforce the host policy before consulting caches or doing network work.
 - HTTP necessarily transfers the **whole bounded RSS/Atom response**, including any extra fields the feed server includes. The metadata parser ignores those extra fields and never stores or displays them. This is not a promise of server-side field selection. The publisher must approve the feed retrieval and display conditions before activation.
 
-**Joho no Todai remains pending review.** This branch does not add it to `source_catalog.json`, include a live feed endpoint or source assets, fetch its site/feed, or activate it. The English RSS supplied in issue #1 is a review reference, not activation permission. Catalogue eligibility, listing conditions and any agreed retention/display terms still require the maintainer's editorial decision and publisher confirmation. The software's MIT license does not sublicense publisher articles or images or authorize redistribution beyond agreed display.
+**Joho no Todai remains pending review.** This release does not add it to `source_catalog.json`, include a live feed endpoint or source assets, fetch its site/feed, or activate it. The English RSS supplied in issue #1 is a review reference, not activation permission. Catalogue eligibility, listing conditions and any agreed retention/display terms still require the maintainer's editorial decision and publisher confirmation. The software's MIT license does not sublicense publisher articles or images or authorize redistribution beyond agreed display.
 
 Synthetic policy checks (no publisher requests):
 

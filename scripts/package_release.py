@@ -7,7 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED = {"node_modules", "__pycache__", ".git", ".settings", ".runtime", ".test-settings", ".test-runtime", "releases"}
-RUNTIME = ("main.py", "package.json", "plugin.json", "dist/index.js", "countries.json", "source_catalog.json", "source_assets_manifest.json", "LICENSE", "README.md", "CHANGELOG_1.0.1.md")
+RUNTIME = ("main.py", "package.json", "plugin.json", "dist/index.js", "countries.json", "source_catalog.json", "source_assets_manifest.json", "LICENSE", "README.md", "CHANGELOG_1.0.2.md")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -25,7 +25,7 @@ def main():
     exclude_output_tree = excluded_output != ROOT.resolve() and ROOT.resolve() in excluded_output.parents
     project_files = sorted(file for file in ROOT.rglob("*") if file.is_file()
         and not set(file.relative_to(ROOT).parts).intersection(IGNORED)
-        and not file.name.endswith((".pyc", ".pyo", ".zip", ".log"))
+        and not file.name.endswith((".pyc", ".pyo", ".zip", ".log", ".map", ".tsbuildinfo"))
         and file.resolve() != installer.resolve() and file.resolve() != project.resolve()
         and not (exclude_output_tree and excluded_output in file.resolve().parents))
     for archive, prefix, files in [(installer, "News", installer_files), (project, f"News-project-{version}", project_files)]:
