@@ -703,7 +703,20 @@ function openWebsiteInSteam(url) {
     catch { }
     void rpc("open_external_url", value).catch((error) => console.warn("[News] Could not open website", error));
 }
+function isMetadataOnly(item) {
+    return item?.contentMode === "metadata_only";
+}
+function metadataNewsItem(item) {
+    // Never revive a cover, full body or resolved/enriched URL from UI memory.
+    return { id: item.id, title: item.title, url: item.url, sourceId: item.sourceId, source: item.source,
+        country: item.country, published: item.published, publishedText: item.publishedText, excerpt: item.excerpt,
+        type: "article", contentMode: "metadata_only" };
+}
 function openArticle(item) {
+    if (isMetadataOnly(item)) {
+        openWebsiteInSteam(item.url);
+        return;
+    }
     // Freeze the identity for this route. Use a resolved publisher URL when cover
     // enrichment already discovered it, but keep the feed item itself stable.
     window.__deckyNewsOpenItem = { ...stabilizeNewsItem(item), url: item.resolvedUrl || item.url };
@@ -786,12 +799,18 @@ function newsItemMemoryKeys(item) {
     return Array.from(new Set(keys));
 }
 function rememberCardImage(item, image) {
+    if (isMetadataOnly(item)) {
+        newsItemMemoryKeys(item).forEach((key) => cardImageMemory.delete(key));
+        return;
+    }
     const value = String(image || "").trim();
     if (!value)
         return;
     newsItemMemoryKeys(item).forEach((key) => cardImageMemory.set(key, value));
 }
 function recallCardImage(item) {
+    if (isMetadataOnly(item))
+        return "";
     for (const key of newsItemMemoryKeys(item)) {
         const value = String(cardImageMemory.get(key) || "").trim();
         if (value)
@@ -800,6 +819,8 @@ function recallCardImage(item) {
     return "";
 }
 function stabilizeNewsItem(item) {
+    if (isMetadataOnly(item))
+        return metadataNewsItem(item);
     const remembered = recallCardImage(item);
     const image = String(item?.image || remembered || "");
     if (image)
@@ -807,6 +828,8 @@ function stabilizeNewsItem(item) {
     return image === item.image ? item : { ...item, image };
 }
 function mergeNewsItemStable(existing, replacement) {
+    if (isMetadataOnly(existing) || isMetadataOnly(replacement))
+        return metadataNewsItem({ ...existing, ...replacement });
     const merged = { ...existing, ...replacement };
     // Empty/raw feed values are never allowed to erase enrichment already shown.
     // Keep the first successful cover stable for this cache revision as well.
@@ -887,7 +910,7 @@ function useNews(tabId, limit = 80, sourceIds = [], reserveFirstWaveSlots = fals
             return;
         const missing = baseItems
             .map(stabilizeNewsItem)
-            .filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image && item.id);
+            .filter((item) => !item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image && item.id);
         if (!missing.length)
             return;
         const queue = coverQueueRef.current;
@@ -1231,7 +1254,7 @@ async function hydratePrefetchedCoverCaches(tabIds, limit = 120) {
     for (const tabId of tabIds) {
         const snapshot = newsUiCache.get(`${tabId}:${limit}`);
         for (const item of snapshot?.items ?? []) {
-            if (!item.loadingPlaceholder && item.type === "article" && !item.image && item.id)
+            if (!item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image && item.id)
                 unique.set(item.id, item);
         }
     }
@@ -1320,7 +1343,7 @@ async function prefetchNewsTab(tabId, limit = 120) {
     if (!tabId)
         return;
     const warmCovers = (items) => {
-        const missing = items.filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image);
+        const missing = items.filter((item) => !item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image);
         if (missing.length)
             void rpc("start_cover_enrichment", missing, missing.length).catch(() => { });
     };
@@ -1842,15 +1865,15 @@ function NewsQamCard({ item }) {
     const identity = sourceLabelIdentity(item.source, item.sourceSiteUrl || item.url);
     const googleBrand = /google news|notizie principali/i.test(item.source) || /news\.google\./i.test(item.sourceSiteUrl || "");
     return SP_REACT.createElement(DialogButton, { onClick: () => openArticle(item), style: { width: "100%", minHeight: 64, height: 64, padding: "6px 8px", marginBottom: 6, borderRadius: 9 } },
-        SP_REACT.createElement("span", { style: { display: "grid", gridTemplateColumns: "52px minmax(0,1fr)", gap: 9, width: "100%", alignItems: "center", textAlign: "left" } },
-            SP_REACT.createElement("span", { style: { width: 52, height: 52, borderRadius: googleBrand ? 9 : 0, overflow: "hidden", background: googleBrand ? "rgba(255,255,255,.92)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" } },
+        SP_REACT.createElement("span", { style: { display: "grid", gridTemplateColumns: isMetadataOnly(item) ? "minmax(0,1fr)" : "52px minmax(0,1fr)", gap: 9, width: "100%", alignItems: "center", textAlign: "left" } },
+            !isMetadataOnly(item) ? SP_REACT.createElement("span", { style: { width: 52, height: 52, borderRadius: googleBrand ? 9 : 0, overflow: "hidden", background: googleBrand ? "rgba(255,255,255,.92)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" } },
                 item.sourceFavicon ? SP_REACT.createElement("img", { src: item.sourceFavicon, alt: "", style: { width: googleBrand ? 40 : 52, height: googleBrand ? 40 : 52, objectFit: "contain", imageRendering: "auto" }, onError: (e) => { const image = e.currentTarget; const backup = String(item.sourceLogo || ""); if (backup && backup !== item.sourceFavicon && image.dataset.newsFallback !== "1") {
                         image.dataset.newsFallback = "1";
                         image.src = backup;
                         return;
                     } image.style.display = "none"; const n = image.nextElementSibling; if (n)
                         n.style.display = "flex"; } }) : null,
-                SP_REACT.createElement("span", { style: { display: item.sourceFavicon ? "none" : "flex", color: "#17181b", fontWeight: 850, fontSize: 16 } }, identity.initials)),
+                SP_REACT.createElement("span", { style: { display: item.sourceFavicon ? "none" : "flex", color: "#17181b", fontWeight: 850, fontSize: 16 } }, identity.initials)) : null,
             SP_REACT.createElement("span", { style: { minWidth: 0 } },
                 SP_REACT.createElement("strong", { style: { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 13.5, lineHeight: 1.15 } }, item.title),
                 SP_REACT.createElement("span", { style: { display: "block", marginTop: 4, fontSize: 10.5, opacity: .58, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } },
@@ -1982,11 +2005,12 @@ const ArticleCard = memo(function ArticleCard({ item, index, placement }) {
             else if (button === GamepadButton.DIR_DOWN)
                 focusDirectionalMagazineCard(event, "down");
         }, onClick: () => openArticle(item) },
-        SP_REACT.createElement(NewsImage, { src: item.image, source: item.source, url: item.sourceSiteUrl || item.url, logo: item.sourceLogo, favicon: item.sourceFavicon, color: item.sourceColor, objectFit: "cover", objectPosition: "center top", style: { position: "absolute", inset: 0, zIndex: 0 }, minWidth: 320, minHeight: 160, fallbackCompact: true, showFallbackWhileLoading: true, cacheOnError: true, referer: item.resolvedUrl || item.url, priority: index < 16, eager: true }),
+        !isMetadataOnly(item) ? SP_REACT.createElement(NewsImage, { src: item.image, source: item.source, url: item.sourceSiteUrl || item.url, logo: item.sourceLogo, favicon: item.sourceFavicon, color: item.sourceColor, objectFit: "cover", objectPosition: "center top", style: { position: "absolute", inset: 0, zIndex: 0 }, minWidth: 320, minHeight: 160, fallbackCompact: true, showFallbackWhileLoading: true, cacheOnError: true, referer: item.resolvedUrl || item.url, priority: index < 16, eager: true }) : null,
         SP_REACT.createElement("span", { style: { position: "absolute", inset: 0, zIndex: 2, display: "block", pointerEvents: "none", background: "linear-gradient(to top, rgba(4,5,8,.98) 0%, rgba(4,5,8,.76) 35%, rgba(4,5,8,.10) 77%)" } }),
         item.type === "video" ? SP_REACT.createElement("span", { style: { position: "absolute", zIndex: 4, top: 12, right: 12, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, background: "rgba(0,0,0,.72)", fontSize: 14 } }, "\u25B6") : null,
         SP_REACT.createElement("span", { style: { position: "absolute", zIndex: 3, left: large ? 18 : 12, right: large ? 18 : 12, bottom: large ? 16 : 11, textAlign: "left", pointerEvents: "none" } },
             SP_REACT.createElement("strong", { style: { display: "-webkit-box", WebkitLineClamp: large ? 3 : 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: large ? 24 : 16, lineHeight: 1.14, paddingBottom: ".10em", letterSpacing: "-.018em", color: "#fff", textShadow: "0 2px 12px rgba(0,0,0,.70)" } }, item.title),
+            isMetadataOnly(item) && item.excerpt ? SP_REACT.createElement("span", { style: { display: "-webkit-box", WebkitLineClamp: large ? 4 : 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginTop: 12, fontSize: large ? 17 : 13, lineHeight: 1.45, color: "rgba(255,255,255,.78)" } }, item.excerpt) : null,
             SP_REACT.createElement("span", { style: { display: "block", marginTop: 6, fontSize: large ? 12 : 10.5, color: "rgba(255,255,255,.76)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } },
                 item.source,
                 item.published ? ` · ${formatAge(item.published)}` : ""))));
@@ -2244,7 +2268,23 @@ function ReaderLegendHint({ glyph, label, wide = false }) {
         SP_REACT.createElement("span", { style: { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: wide ? 54 : 28, height: 28 } }, glyph),
         SP_REACT.createElement("span", { style: { fontSize: 9.5, lineHeight: 1.05, color: "rgba(255,255,255,.92)", fontWeight: 560 } }, label));
 }
+function MetadataArticlePreview({ item }) {
+    return SP_REACT.createElement(FullscreenShell, { style: { background: "#111216" } },
+        SP_REACT.createElement(Focusable, { "flow-children": "vertical", onCancel: goBack, onCancelButton: goBack, style: { height: "100%", boxSizing: "border-box", padding: "44px 64px", display: "flex", flexDirection: "column", gap: 24 } },
+            SP_REACT.createElement(DialogButton, { style: { ...baseButton, width: 140 }, onClick: goBack }, tr("back")),
+            SP_REACT.createElement("div", { style: { maxWidth: 960, margin: "auto 0", textAlign: "left" } },
+                SP_REACT.createElement("div", { style: { fontSize: 16, opacity: .7, marginBottom: 16 } },
+                    item.source,
+                    item.published ? ` · ${formatDate(item.published)}` : ""),
+                SP_REACT.createElement("h1", { style: { fontSize: "clamp(32px,4vw,54px)", lineHeight: 1.18, margin: "0 0 24px" } }, item.title),
+                item.excerpt ? SP_REACT.createElement("p", { style: { fontSize: 22, lineHeight: 1.5, maxWidth: 840 } }, item.excerpt) : null,
+                SP_REACT.createElement(DialogButton, { style: { ...baseButton, width: 260, marginTop: 20 }, onClick: () => openWebsiteInSteam(item.url) }, tr("readSite")))));
+}
 function ArticleRoute() {
+    const item = window.__deckyNewsOpenItem;
+    return item && isMetadataOnly(item) ? SP_REACT.createElement(MetadataArticlePreview, { item: metadataNewsItem(item) }) : SP_REACT.createElement(ReaderArticleRoute, null);
+}
+function ReaderArticleRoute() {
     const item = window.__deckyNewsOpenItem;
     const cachedArticle = item?.url ? articleUiCache.get(item.url) : undefined;
     const cachedFresh = Boolean(cachedArticle && Date.now() - cachedArticle.at < ARTICLE_UI_CACHE_MS);
@@ -2505,6 +2545,8 @@ function ArticleRoute() {
         event?.stopPropagation?.();
         stopReaderContinuousScroll();
     }, [stopReaderContinuousScroll]);
+    if (article?.contentMode === "metadata_only" && item)
+        return SP_REACT.createElement(MetadataArticlePreview, { item: metadataNewsItem(item) });
     const title = article?.title || item?.title || "Articolo";
     const articleHero = article?.hero || "";
     const hero = item?.image || articleHero || "";

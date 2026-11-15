@@ -79,14 +79,14 @@ class FakeResponse:
     def read(self, n=-1):
         payload = {"data": {"url": "https://example.com/full", "title": "Titolo completo", "content": markdown, "timestamp": "2026-08-17T20:00:00Z"}}
         return json.dumps(payload).encode("utf-8")
-orig_urlopen = mod.urllib.request.urlopen
-mod.urllib.request.urlopen = lambda *args, **kwargs: FakeResponse()
+orig_urlopen = mod._policy_urlopen
+mod._policy_urlopen = lambda *args, **kwargs: FakeResponse()
 try:
     jr = plugin._jina_reader_article_sync("https://example.com/story")
     assert jr.get("hero") == "https://cdn.example.com/cover.jpg", jr
     assert int(jr.get("textLength") or 0) > 150, jr
 finally:
-    mod.urllib.request.urlopen = orig_urlopen
+    mod._policy_urlopen = orig_urlopen
 
 catalog = json.loads((root / 'source_catalog.json').read_text(encoding='utf-8'))
 it_names = {x['name'] for x in catalog['IT']}
