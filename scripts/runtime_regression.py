@@ -84,7 +84,7 @@ class ImageServerTests(unittest.TestCase):
             return bytes(result)
 
     def test_01_import_without_http_server(self):
-        self.assertNotIn("import http.server", (ROOT / "main.py").read_text())
+        self.assertNotIn("import http.server", (ROOT / "main.py").read_text(encoding="utf-8"))
         self.assertGreater(self.server.port, 0)
         self.assertEqual(self.server._server.getsockname()[0], "127.0.0.1")
 

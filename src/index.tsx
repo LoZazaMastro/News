@@ -25,6 +25,8 @@ type Source = {
   faviconUrl?: string;
   logoUrl?: string;
   brandColor?: string;
+  contentMode?: "metadata_only";
+  policyState?: "pending_review" | "approved";
 };
 
 type NewsTab = { id: string; name: string; sourceIds: string[]; enabled?: boolean; category?: string };
@@ -61,6 +63,7 @@ type NewsItem = {
   sourceFavicon?: string;
   sourceColor?: string;
   loadingPlaceholder?: boolean;
+  contentMode?: "metadata_only";
 };
 type ReaderBlock = { type: "text" | "heading" | "quote" | "image" | "embed"; text?: string; url?: string; alt?: string; provider?: string; embedUrl?: string; title?: string };
 type Article = {
@@ -76,6 +79,7 @@ type Article = {
   embedUrl?: string;
   blocks?: ReaderBlock[];
   error?: string;
+  contentMode?: "metadata_only";
 };
 
 declare global {
@@ -676,7 +680,19 @@ function openWebsiteInSteam(url: string) {
   void rpc("open_external_url", value).catch((error) => console.warn("[News] Could not open website", error));
 }
 
+function isMetadataOnly(item: Partial<NewsItem> | undefined | null) {
+  return item?.contentMode === "metadata_only";
+}
+
+function metadataNewsItem(item: NewsItem): NewsItem {
+  // Never revive a cover, full body or resolved/enriched URL from UI memory.
+  return {id:item.id,title:item.title,url:item.url,sourceId:item.sourceId,source:item.source,
+    country:item.country,published:item.published,publishedText:item.publishedText,excerpt:item.excerpt,
+    type:"article",contentMode:"metadata_only"};
+}
+
 function openArticle(item: NewsItem) {
+  if (isMetadataOnly(item)) { openWebsiteInSteam(item.url); return; }
   // Freeze the identity for this route. Use a resolved publisher URL when cover
   // enrichment already discovered it, but keep the feed item itself stable.
   window.__deckyNewsOpenItem = { ...stabilizeNewsItem(item), url: item.resolvedUrl || item.url };
@@ -761,12 +777,14 @@ function newsItemMemoryKeys(item: Partial<NewsItem> | null | undefined) {
 }
 
 function rememberCardImage(item: Partial<NewsItem> | null | undefined, image: string) {
+  if (isMetadataOnly(item)) { newsItemMemoryKeys(item).forEach((key) => cardImageMemory.delete(key)); return; }
   const value = String(image || "").trim();
   if (!value) return;
   newsItemMemoryKeys(item).forEach((key) => cardImageMemory.set(key, value));
 }
 
 function recallCardImage(item: Partial<NewsItem> | null | undefined) {
+  if (isMetadataOnly(item)) return "";
   for (const key of newsItemMemoryKeys(item)) {
     const value = String(cardImageMemory.get(key) || "").trim();
     if (value) return value;
@@ -775,6 +793,7 @@ function recallCardImage(item: Partial<NewsItem> | null | undefined) {
 }
 
 function stabilizeNewsItem(item: NewsItem): NewsItem {
+  if (isMetadataOnly(item)) return metadataNewsItem(item);
   const remembered = recallCardImage(item);
   const image = String(item?.image || remembered || "");
   if (image) rememberCardImage(item, image);
@@ -782,6 +801,7 @@ function stabilizeNewsItem(item: NewsItem): NewsItem {
 }
 
 function mergeNewsItemStable(existing: NewsItem, replacement: NewsItem): NewsItem {
+  if (isMetadataOnly(existing) || isMetadataOnly(replacement)) return metadataNewsItem({...existing,...replacement});
   const merged: NewsItem = { ...existing, ...replacement };
   // Empty/raw feed values are never allowed to erase enrichment already shown.
   // Keep the first successful cover stable for this cache revision as well.
@@ -860,7 +880,7 @@ function useNews(tabId: string, limit = 80, sourceIds: string[] = [], reserveFir
     if (newsDisposed) return;
     const missing = baseItems
       .map(stabilizeNewsItem)
-      .filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image && item.id);
+      .filter((item) => !item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image && item.id);
     if (!missing.length) return;
 
     const queue = coverQueueRef.current;
@@ -1063,7 +1083,7 @@ function useNews(tabId: string, limit = 80, sourceIds: string[] = [], reserveFir
           // A source completion may contribute AT MOST one first-wave card. The
           // randomized source priority decides which ready publisher contributes
           // next, so completion speed cannot let a single publisher dominate.
-          const byKey = new Map(batch.map((item: NewsItem) => [newsItemKey(item), item]));
+          const byKey = new Map<string, NewsItem>(batch.map((item: NewsItem) => [newsItemKey(item), item]));
           visibleItems = visibleItems.map((item) => {
             if (item.loadingPlaceholder) return item;
             const replacement = byKey.get(newsItemKey(item));
@@ -1180,7 +1200,7 @@ async function hydratePrefetchedCoverCaches(tabIds: string[], limit = 120) {
   for (const tabId of tabIds) {
     const snapshot = newsUiCache.get(`${tabId}:${limit}`);
     for (const item of snapshot?.items ?? []) {
-      if (!item.loadingPlaceholder && item.type === "article" && !item.image && item.id) unique.set(item.id, item);
+      if (!item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image && item.id) unique.set(item.id, item);
     }
   }
   const missing = Array.from(unique.values());
@@ -1254,7 +1274,7 @@ async function prefetchNewsTab(tabId: string, limit = 120) {
   const cacheKey = `${tabId || "__all__"}:${limit}`;
   if (!tabId) return;
   const warmCovers = (items: NewsItem[]) => {
-    const missing = items.filter((item) => !item.loadingPlaceholder && item.type === "article" && !item.image);
+    const missing = items.filter((item) => !item.loadingPlaceholder && !isMetadataOnly(item) && item.type === "article" && !item.image);
     if (missing.length) void rpc<any>("start_cover_enrichment", missing, missing.length).catch(() => {});
   };
   const cached = newsUiCache.get(cacheKey);
@@ -1695,11 +1715,11 @@ function NewsQamCard({ item }: { item: NewsItem }) {
   const identity=sourceLabelIdentity(item.source,item.sourceSiteUrl||item.url);
   const googleBrand=/google news|notizie principali/i.test(item.source)||/news\.google\./i.test(item.sourceSiteUrl||"");
   return <DialogButton onClick={()=>openArticle(item)} style={{width:"100%",minHeight:64,height:64,padding:"6px 8px",marginBottom:6,borderRadius:9}}>
-    <span style={{display:"grid",gridTemplateColumns:"52px minmax(0,1fr)",gap:9,width:"100%",alignItems:"center",textAlign:"left"}}>
-      <span style={{width:52,height:52,borderRadius:googleBrand?9:0,overflow:"hidden",background:googleBrand?"rgba(255,255,255,.92)":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <span style={{display:"grid",gridTemplateColumns:isMetadataOnly(item)?"minmax(0,1fr)":"52px minmax(0,1fr)",gap:9,width:"100%",alignItems:"center",textAlign:"left"}}>
+      {!isMetadataOnly(item) ? <span style={{width:52,height:52,borderRadius:googleBrand?9:0,overflow:"hidden",background:googleBrand?"rgba(255,255,255,.92)":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
         {item.sourceFavicon?<img src={item.sourceFavicon} alt="" style={{width:googleBrand?40:52,height:googleBrand?40:52,objectFit:"contain",imageRendering:"auto"}} onError={(e:any)=>{const image=e.currentTarget as HTMLImageElement;const backup=String(item.sourceLogo||"");if(backup&&backup!==item.sourceFavicon&&image.dataset.newsFallback!=="1"){image.dataset.newsFallback="1";image.src=backup;return;}image.style.display="none"; const n=image.nextElementSibling as HTMLElement|null;if(n)n.style.display="flex";}}/>:null}
         <span style={{display:item.sourceFavicon?"none":"flex",color:"#17181b",fontWeight:850,fontSize:16}}>{identity.initials}</span>
-      </span>
+      </span> : null}
       <span style={{minWidth:0}}><strong style={{display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontSize:13.5,lineHeight:1.15}}>{item.title}</strong><span style={{display:"block",marginTop:4,fontSize:10.5,opacity:.58,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.source}{item.published?` · ${formatAge(item.published)}`:""}{item.type==="video"?` · ${tr("video")}`:""}</span></span>
     </span>
   </DialogButton>;
@@ -1841,11 +1861,12 @@ const ArticleCard = memo(function ArticleCard({ item, index, placement }: { item
       }}
       onClick={() => openArticle(item)}
     >
-      <NewsImage src={item.image} source={item.source} url={item.sourceSiteUrl || item.url} logo={item.sourceLogo} favicon={item.sourceFavicon} color={item.sourceColor} objectFit="cover" objectPosition="center top" style={{ position: "absolute", inset: 0, zIndex:0 }} minWidth={320} minHeight={160} fallbackCompact={true} showFallbackWhileLoading={true} cacheOnError={true} referer={item.resolvedUrl || item.url} priority={index < 16} eager={true} />
+      {!isMetadataOnly(item) ? <NewsImage src={item.image} source={item.source} url={item.sourceSiteUrl || item.url} logo={item.sourceLogo} favicon={item.sourceFavicon} color={item.sourceColor} objectFit="cover" objectPosition="center top" style={{ position: "absolute", inset: 0, zIndex:0 }} minWidth={320} minHeight={160} fallbackCompact={true} showFallbackWhileLoading={true} cacheOnError={true} referer={item.resolvedUrl || item.url} priority={index < 16} eager={true} /> : null}
       <span style={{ position:"absolute", inset:0, zIndex:2, display:"block", pointerEvents:"none", background:"linear-gradient(to top, rgba(4,5,8,.98) 0%, rgba(4,5,8,.76) 35%, rgba(4,5,8,.10) 77%)" }} />
       {item.type === "video" ? <span style={{ position:"absolute", zIndex:4, top:12, right:12, width:30, height:30, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:999, background:"rgba(0,0,0,.72)", fontSize:14 }}>▶</span> : null}
       <span style={{ position:"absolute", zIndex:3, left:large?18:12, right:large?18:12, bottom:large?16:11, textAlign:"left", pointerEvents:"none" }}>
         <strong style={{ display:"-webkit-box", WebkitLineClamp:large?3:2, WebkitBoxOrient:"vertical", overflow:"hidden", fontSize:large?24:16, lineHeight:1.14, paddingBottom:".10em", letterSpacing:"-.018em", color:"#fff", textShadow:"0 2px 12px rgba(0,0,0,.70)" }}>{item.title}</strong>
+        {isMetadataOnly(item) && item.excerpt ? <span style={{display:"-webkit-box",WebkitLineClamp:large?4:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginTop:12,fontSize:large?17:13,lineHeight:1.45,color:"rgba(255,255,255,.78)"}}>{item.excerpt}</span> : null}
         <span style={{ display:"block", marginTop:6, fontSize:large?12:10.5, color:"rgba(255,255,255,.76)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.source}{item.published ? ` · ${formatAge(item.published)}` : ""}</span>
       </span>
     </DialogButton>
@@ -2089,7 +2110,27 @@ function ReaderLegendHint({ glyph, label, wide = false }: { glyph: any; label: s
   </span>;
 }
 
+function MetadataArticlePreview({item}: {item:NewsItem}) {
+  return <FullscreenShell style={{background:"#111216"}}>
+    <Focusable flow-children="vertical" onCancel={goBack} onCancelButton={goBack}
+      style={{height:"100%",boxSizing:"border-box",padding:"44px 64px",display:"flex",flexDirection:"column",gap:24}}>
+      <DialogButton style={{...baseButton,width:140}} onClick={goBack}>{tr("back")}</DialogButton>
+      <div style={{maxWidth:960,margin:"auto 0",textAlign:"left"}}>
+        <div style={{fontSize:16,opacity:.7,marginBottom:16}}>{item.source}{item.published?` · ${formatDate(item.published)}`:""}</div>
+        <h1 style={{fontSize:"clamp(32px,4vw,54px)",lineHeight:1.18,margin:"0 0 24px"}}>{item.title}</h1>
+        {item.excerpt?<p style={{fontSize:22,lineHeight:1.5,maxWidth:840}}>{item.excerpt}</p>:null}
+        <DialogButton style={{...baseButton,width:260,marginTop:20}} onClick={()=>openWebsiteInSteam(item.url)}>{tr("readSite")}</DialogButton>
+      </div>
+    </Focusable>
+  </FullscreenShell>;
+}
+
 function ArticleRoute() {
+  const item = window.__deckyNewsOpenItem;
+  return item && isMetadataOnly(item) ? <MetadataArticlePreview item={metadataNewsItem(item)}/> : <ReaderArticleRoute/>;
+}
+
+function ReaderArticleRoute() {
   const item = window.__deckyNewsOpenItem;
   const cachedArticle = item?.url ? articleUiCache.get(item.url) : undefined;
   const cachedFresh = Boolean(cachedArticle && Date.now() - cachedArticle.at < ARTICLE_UI_CACHE_MS);
@@ -2305,6 +2346,8 @@ function ArticleRoute() {
     event?.stopPropagation?.();
     stopReaderContinuousScroll();
   }, [stopReaderContinuousScroll]);
+
+  if (article?.contentMode === "metadata_only" && item) return <MetadataArticlePreview item={metadataNewsItem(item)}/>;
 
   const title = article?.title || item?.title || "Articolo";
   const articleHero = article?.hero || "";

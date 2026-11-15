@@ -26,10 +26,10 @@ if (argument) {
   factory(module, module.exports);
   React = module.exports;
   console.log(`Using real Steam React ${React.version}`);
-  const chunk = fs.readdirSync(steamRoot).filter((item) => /^chunk.*\.js$/.test(item))
+  const chunk = fs.readdirSync(steamRoot).filter((item) => /^(?:chunk.*|sp)\.js$/.test(item))
     .map((item) => fs.readFileSync(path.join(steamRoot, item), 'utf8')).join('\n');
   for (const signature of ['window.SteamUIStore=', 'get GamepadUIMainWindowInstance()',
-      'NavigateToSteamWeb(', 'BCanNavigate()', 'p[p.OPTIONS=4]', 'p[p.START=14]', 'p[p.DIR_UP=9]']) {
+      'NavigateToSteamWeb(', 'BCanNavigate()', '.OPTIONS=4]', '.START=14]', '.DIR_UP=9]']) {
     assert.ok(chunk.includes(signature), `Steam signature missing: ${signature}`);
   }
   console.log('Supplied Steam navigation/input signatures: OK');
@@ -89,9 +89,11 @@ function fixture({legacy = false} = {}) {
     queueMicrotask: (fn) => fn(), MutationObserver: class {observe(){} disconnect(){}},
     setTimeout:win.setTimeout, clearTimeout:win.clearTimeout,
   });
-  let source = fs.readFileSync(path.join(root, 'dist/index.js'), 'utf8').replace('export default ', 'globalThis.__pluginFactory = ');
+  let source = fs.readFileSync(process.env.NEWS_TEST_BUNDLE || path.join(root, 'dist/index.js'), 'utf8').replace('export default ', 'globalThis.__pluginFactory = ');
   source += `\n;globalThis.__test = {mainWindow, navigate, goBack, openWebsiteInSteam, callBackend, scheduleNewsTask,
     hideChromeElement, forceRestoreChrome, CURRENT_LOCALE, resolveNewsLocale,
+    openArticle, isMetadataOnly, metadataNewsItem, stabilizeNewsItem, mergeNewsItemStable, rememberCardImage,
+    NewsQamCard, ArticleCard, NewsImage, ArticleRoute, MetadataArticlePreview,
     get timerCount() {return backgroundUiTimers.size}, get disposed() {return newsDisposed}};`;
   vm.runInContext(source, context, {timeout: 8000});
   return {state, timers, frames, elements, style, context, test: context.__test, win, main, router, Navigation, routes, connections};
@@ -176,5 +178,37 @@ await test('Reader does not mistake Steam OPTIONS/Y for Start/Menu', () => {
   const source=fs.readFileSync(path.join(root,'src/index.tsx'),'utf8');
   const fontUp=source.match(/const fontUp = ([^;]+);/)[1];assert.ok(!fontUp.includes('gp.OPTIONS'));
   assert.ok(fontUp.includes('gp.START'));
+});
+const metadataFixture = {id:'metadata',title:'AIとLinuxの速報',url:'https://publisher.invalid/original',sourceId:'publisher',source:'Synthetic publication',country:'JP',published:1794736800,excerpt:'出版社の短い説明。',type:'article',contentMode:'metadata_only'};
+const children = (node) => {const value=node?.props?.children;const nested=Array.isArray(value)?value.flat(Infinity):[value];return [node,...nested.filter(Boolean).flatMap(children)];};
+const renderMemo = (component, props) => (typeof component === 'function' ? component : component.type)(props);
+await test('metadata-only whole-card activation visits original website without Reader or backend fetch', () => {
+  const f=fixture();const polluted={...metadataFixture,resolvedUrl:'https://elsewhere.invalid/enriched',image:'IMAGE_CANARY',feedContent:'FULL_ARTICLE_CANARY'};
+  f.test.openArticle(polluted);assert.equal(f.state.events[0][0],'web');assert.equal(f.state.events[0][1],metadataFixture.url);
+  assert.ok(!f.state.events.some(([kind,url])=>kind==='navigate'&&url==='/news/article'));assert.equal(f.state.calls.length,0);
+});
+await test('metadata-only QAM and magazine cards do not render images or generated publisher icons', () => {
+  const f=fixture();const item={...metadataFixture,image:'IMAGE_CANARY',sourceLogo:'LOGO_CANARY',sourceFavicon:'ICON_CANARY'};
+  const qam=f.test.NewsQamCard({item});const magazine=renderMemo(f.test.ArticleCard,{item,index:0,placement:{x:0,y:0,w:6,h:2,style:{}}});
+  for(const node of [qam,magazine]){
+    const nodes=children(node);assert.ok(!nodes.some(n=>n?.type==='img'||n?.type==='svg'||n?.type===f.test.NewsImage));
+    assert.ok(JSON.stringify(node).includes(metadataFixture.title));assert.ok(!JSON.stringify(node).includes('CANARY'));
+    node.props.onClick();
+  }
+  assert.equal(f.state.events.filter(([kind])=>kind==='web').length,2);assert.equal(f.state.calls.length,0);
+});
+await test('metadata policy replaces stale UI artwork and full-body memory', () => {
+  const f=fixture();const old={...metadataFixture,contentMode:undefined,image:'IMAGE_CANARY',feedContent:'FULL_ARTICLE_CANARY',resolvedUrl:'https://elsewhere.invalid/enriched'};
+  f.test.rememberCardImage(old,old.image);
+  for(const value of [f.test.stabilizeNewsItem({...old,contentMode:'metadata_only'}),f.test.mergeNewsItemStable(old,metadataFixture)]){
+    assert.equal(value.title,metadataFixture.title);assert.equal(value.excerpt,metadataFixture.excerpt);assert.equal(value.url,metadataFixture.url);
+    assert.ok(!JSON.stringify(value).includes('CANARY'));assert.ok(!('image' in value));assert.ok(!('resolvedUrl' in value));
+  }
+});
+await test('direct metadata route entries use text preview without mounting Reader', () => {
+  const f=fixture();f.win.__deckyNewsOpenItem={...metadataFixture,image:'IMAGE_CANARY'};
+  const route=f.test.ArticleRoute();assert.equal(route.type,f.test.MetadataArticlePreview);
+  const tree=f.test.MetadataArticlePreview(route.props);assert.ok(!children(tree).some(n=>n?.type==='img'||n?.type===f.test.NewsImage));
+  assert.equal(f.state.calls.length,0);
 });
 console.log(`Frontend regression tests: ${count} passed${React.version ? ` (Steam React ${React.version})` : ' (mock React)'}.`);

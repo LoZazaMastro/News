@@ -45,6 +45,53 @@ JINA_COVER_TIMEOUT = 5.0
 GOOGLE_RESOLVE_CACHE_SECONDS = 30 * 24 * 60 * 60
 RESOLVE_CACHE_VERSION = 12
 
+# Publisher processing policy is package-owned. User settings and RPC fallback
+# objects cannot grant permission or override it. This inquiry is NOT activated:
+# no RSS URL is present in the executable policy, catalogue or bundled assets.
+SOURCE_POLICIES = ({
+    "id": "joho-no-todai-review", "version": 1, "hosts": ("joho-todai.com",),
+    "publisher": "Joho no Todai", "state": "pending_review", "mode": "metadata_only",
+    "feedUrls": (), "cacheSeconds": 0,
+},)
+
+
+def _source_policy_url(value: str) -> Optional[Dict[str, Any]]:
+    parsed = urllib.parse.urlparse(str(value or ""))
+    host = (parsed.hostname or "").lower().rstrip(".")
+    for policy in SOURCE_POLICIES:
+        if any(host == allowed or host.endswith("." + allowed) for allowed in policy["hosts"]):
+            return policy
+    # The existing Reader proxy must not be a way around a publisher restriction.
+    if host == "r.jina.ai" and parsed.path.lstrip("/").startswith(("http://", "https://")):
+        return _source_policy_url(parsed.path.lstrip("/"))
+    return None
+
+
+def _policy_feed_allowed(policy: Dict[str, Any], url: str) -> bool:
+    parsed = urllib.parse.urlparse(str(url or ""))
+    return (policy.get("state") == "approved" and policy.get("mode") == "metadata_only"
+            and 0 < int(policy.get("cacheSeconds") or 0) <= 86400
+            and parsed.scheme == "https" and not parsed.username and not parsed.password
+            and str(url) in policy.get("feedUrls", ()))
+
+
+def _assert_policy_network_allowed(url: str) -> None:
+    policy = _source_policy_url(url)
+    if policy and not _policy_feed_allowed(policy, url):
+        raise PermissionError("source_pending_review" if policy["state"] != "approved" else "source_metadata_only")
+
+
+class _SourcePolicyRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _assert_policy_network_allowed(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _policy_urlopen(request, timeout):
+    _assert_policy_network_allowed(request.full_url if hasattr(request, "full_url") else str(request))
+    return urllib.request.build_opener(_SourcePolicyRedirect()).open(request, timeout=timeout)
+
+
 COUNTRY_LANGUAGE = {
     "IT": "it", "FR": "fr", "DE": "de", "ES": "es", "PT": "pt", "BR": "pt",
     "GB": "en", "US": "en", "CA": "en", "AU": "en", "NZ": "en", "IE": "en",
@@ -451,6 +498,73 @@ def _parse_feed_document(data: bytes) -> _FeedXmlParser:
     parser.feed(text)
     parser.close()
     return parser
+
+
+def _metadata_feed_items(data: bytes) -> List[Dict[str, Any]]:
+    """Read direct item fields only; never retain encoded/content/media values.
+
+    HTTP still transfers the whole bounded RSS/Atom document. CDATA from an
+    unapproved field is one ignored token, so fake tags inside it cannot become
+    a headline or description. DTD/entity declarations are not supported.
+    """
+    text = data.decode("utf-8", "replace")
+    if re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", text, re.I):
+        raise ValueError("source_metadata_xml_unsupported")
+    tokens = re.finditer(r"<!\[CDATA\[.*?\]\]>|<!--.*?-->|<[^>]*(?:>|$)|[^<]+", text, re.S)
+    stack: List[str] = []
+    result: List[Dict[str, Any]] = []
+    item: Optional[Dict[str, Any]] = None
+    depth = 0
+    field = ""
+    field_depth = 0
+    chunks: List[str] = []
+    allowed = {"title", "description", "summary", "link", "pubdate", "published", "updated", "date"}
+    for match in tokens:
+        token = match.group(0)
+        if token.startswith("<!--") or token.startswith("<?"):
+            continue
+        if token.startswith("<![CDATA["):
+            if field:
+                chunks.append(token[9:-3])
+            continue
+        if not token.startswith("<"):
+            if field:
+                chunks.append(token)
+            continue
+        tag = re.match(r"<(/?)\s*([A-Za-z0-9_.:-]+)", token)
+        if not tag:
+            continue
+        closing, name = bool(tag.group(1)), tag.group(2).lower()
+        local = name.split(":")[-1]
+        if closing:
+            if field and len(stack) == field_depth:
+                item["fields"].setdefault(field, []).append("".join(chunks))
+                field, chunks = "", []
+            elif field:
+                chunks.append(token)
+            if item is not None and len(stack) == depth and local in {"item", "entry"}:
+                result.append(item)
+                item = None
+                if len(result) >= 80:
+                    break
+            if stack:
+                stack.pop()
+            continue
+        if field:
+            chunks.append(token)
+        if item is None and local in {"item", "entry"} and (not stack or stack[-1].split(":")[-1] in {"channel", "feed"}):
+            item = {"fields": {}, "links": []}
+            depth = len(stack) + 1
+        elif item is not None and len(stack) == depth and local in allowed and (":" not in name or name.startswith("atom:") or name == "dc:date"):
+            if local == "link":
+                attrs = _parse_attrs(token[tag.end():].rstrip(">/"))
+                if attrs.get("href") and attrs.get("rel", "alternate") in {"alternate", ""}:
+                    item["links"].append({"href": attrs["href"], "rel": "alternate"})
+            if not token.rstrip().endswith("/>"):
+                field, field_depth, chunks = local, len(stack) + 1, []
+        if not token.rstrip().endswith("/>"):
+            stack.append(name)
+    return result
 
 
 def _item_text(item: Dict[str, Any], names: Iterable[str]) -> str:
@@ -2049,6 +2163,84 @@ class Plugin:
         self._ilpost_fresh_prefetch_keys: Dict[str, float] = {}
         self._ilpost_fresh_timers: List[threading.Timer] = []
 
+    def _source_policy(self, value: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        raw = value or {}
+        for key in ("url", "resolvedUrl", "sourceSiteUrl", "siteUrl", "site_url", "feedUrl", "feed_url"):
+            policy = _source_policy_url(str(raw.get(key) or ""))
+            if policy:
+                return policy
+        source_id = str(raw.get("sourceId") or raw.get("id") or "")
+        for source in self._config.get("sources", []):
+            if isinstance(source, dict) and str(source.get("id") or "") == source_id:
+                for key in ("siteUrl", "feedUrl"):
+                    policy = _source_policy_url(str(source.get(key) or ""))
+                    if policy:
+                        return policy
+        return None
+
+    def _policy_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        policy = self._source_policy(item)
+        if not policy:
+            result = dict(item)
+            for key in ("image", "sourceLogo", "sourceFavicon"):
+                if _source_policy_url(str(result.get(key) or "")):
+                    result.pop(key, None)
+            return result
+        url, title = item.get("url"), item.get("title")
+        if (policy.get("state") != "approved" or not isinstance(url, str) or not isinstance(title, str)
+                or not title.strip() or len(title) > 4096 or len(url) > 8192 or _source_policy_url(url) != policy):
+            return {}
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
+            return {}
+        excerpt = item.get("excerpt") if isinstance(item.get("excerpt"), str) else ""
+        # A long body in a description field is not an agreed short description.
+        if len(excerpt) > 2000:
+            excerpt = ""
+        try:
+            published = max(0, min(int(item.get("published") or 0), 99999999999))
+        except (TypeError, ValueError, OverflowError):
+            published = 0
+        return {"id": _stable_id("article", url), "title": title, "url": url,
+                "sourceId": str(item.get("sourceId") or ""), "source": policy["publisher"],
+                "country": str(item.get("country") or "")[:8], "published": published,
+                "publishedText": str(item.get("publishedText") or "")[:160], "excerpt": excerpt,
+                "type": "article", "contentMode": "metadata_only", "policyId": policy["id"], "policyVersion": policy["version"]}
+
+    def _policy_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        result = dict(payload)
+        if isinstance(result.get("items"), list):
+            result["items"] = [safe for item in result["items"] if isinstance(item, dict) for safe in [self._policy_item(item)] if safe]
+        if isinstance(result.get("tabs"), dict):
+            result["tabs"] = {key: [safe for item in rows if isinstance(item, dict) for safe in [self._policy_item(item)] if safe]
+                              if isinstance(rows, list) else rows for key, rows in result["tabs"].items()}
+        return result
+
+    def _policy_source(self, raw: Dict[str, Any], policy: Dict[str, Any]) -> Dict[str, Any]:
+        site = str(raw.get("siteUrl") or raw.get("site_url") or "")
+        feed = str(raw.get("feedUrl") or raw.get("feed_url") or "")
+        allowed = _policy_feed_allowed(policy, feed)
+        return {"id": str(raw.get("id") or _stable_id("src", site or feed)), "name": policy["publisher"],
+                "country": str(raw.get("country") or self._config.get("country") or "IT").upper(),
+                "siteUrl": site, "feedUrl": feed, "tags": [], "custom": bool(raw.get("custom", True)),
+                "enabled": bool(raw.get("enabled", True)) and allowed, "faviconUrl": "", "logoUrl": "", "brandColor": "",
+                "contentMode": "metadata_only", "policyId": policy["id"], "policyState": policy["state"]}
+
+    def _policy_categories(self, item: Dict[str, Any]) -> List[str]:
+        if self._source_policy(item):
+            return []
+        return _categorize_item(str(item.get("title") or ""), str(item.get("excerpt") or ""),
+                                str(item.get("url") or ""), item.get("feedCategories") if isinstance(item.get("feedCategories"), list) else [])
+
+    def _policy_reader_denied(self, url: str, fallback: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        policy = self._source_policy({**(fallback or {}), "url": url})
+        if not policy:
+            return None
+        self._purge_policy_item_cache({**(fallback or {}), "url": url})
+        return {"ok": False, "readerAvailable": False, "contentMode": "metadata_only", "url": url,
+                "errorCode": "source_pending_review" if policy["state"] != "approved" else "source_metadata_only",
+                "error": "This source is awaiting review." if policy["state"] != "approved" else "Open this article on the publisher’s website."}
+
     def _log(self, message: str) -> None:
         try:
             decky_plugin.logger.info(f"[News] {message}")
@@ -2140,6 +2332,9 @@ class Plugin:
             migrated_tabs.append(tab)
         merged["tabs"] = migrated_tabs
         self._config = merged
+        for source in normalized_sources:
+            if self._source_policy(source):
+                self._read_feed_cache(str(source.get("id") or ""), source)
         if did_migrate:
             try:
                 self._save()
@@ -2150,6 +2345,9 @@ class Plugin:
         _atomic_json(CONFIG_PATH, self._config)
 
     def _catalog_source(self, country: str, raw: Dict[str, Any]) -> Dict[str, Any]:
+        policy = self._source_policy(raw)
+        if policy:
+            return self._policy_source({**raw, "country": country, "custom": False}, policy)
         site = str(raw.get("site_url") or "")
         feed = str(raw.get("feed_url") or "")
         name = str(raw.get("name") or urllib.parse.urlparse(site).netloc or "Fonte")
@@ -2177,6 +2375,9 @@ class Plugin:
         }
 
     def _normalized_source(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        policy = self._source_policy(raw)
+        if policy:
+            return self._policy_source(raw, policy)
         country = str(raw.get("country") or self._config.get("country") or "IT").upper()
         site = str(raw.get("siteUrl") or raw.get("site_url") or "")
         feed = str(raw.get("feedUrl") or raw.get("feed_url") or "")
@@ -2258,12 +2459,21 @@ class Plugin:
         return CACHE_DIR / f"image-{hashlib.sha1(str(article_url or '').encode('utf-8', 'ignore')).hexdigest()[:20]}.json"
 
     def _read_image_cache(self, article_url: str) -> Dict[str, Any]:
+        if _source_policy_url(article_url):
+            payload = _load_json(self._image_cache_path(article_url), {})
+            filename = str(payload.get("cachedFile") or "") if isinstance(payload, dict) else ""
+            if re.fullmatch(r"[0-9a-f]{40}\.(?:jpe?g|png|webp|gif|avif)", filename):
+                (IMAGE_CACHE_DIR / filename).unlink(missing_ok=True)
+            self._image_cache_path(article_url).unlink(missing_ok=True)
+            return {}
         payload = _load_json(self._image_cache_path(article_url), {})
         if not isinstance(payload, dict) or int(payload.get("cacheVersion") or 0) != IMAGE_CACHE_VERSION:
             return {}
         return payload
 
     def _write_image_cache(self, article_url: str, remote_image: str, cached_file: str = "") -> None:
+        if _source_policy_url(article_url) or _source_policy_url(remote_image):
+            return
         """Persist cover metadata without allowing a slower failed race to erase it.
 
         Card discovery is intentionally concurrent. A successful direct request and
@@ -2327,6 +2537,8 @@ class Plugin:
         return self._image_server.image_url(filename)
 
     def _cache_remote_image_sync(self, image_url: str, referer: str = "") -> Tuple[str, str]:
+        if _source_policy_url(image_url) or _source_policy_url(referer):
+            return "", ""
         value = str(image_url or "").strip()
         if not value.startswith(("http://", "https://")):
             return value, ""
@@ -2344,7 +2556,7 @@ class Plugin:
             headers["Referer"] = referer
         request = urllib.request.Request(value, headers=headers)
         try:
-            with urllib.request.urlopen(request, timeout=7.0) as response:
+            with _policy_urlopen(request, timeout=7.0) as response:
                 data = response.read(MAX_IMAGE_BYTES + 1)
                 content_type = str(response.headers.get("Content-Type") or "")
             if not data or len(data) > MAX_IMAGE_BYTES or not content_type.lower().startswith("image/"):
@@ -2379,6 +2591,8 @@ class Plugin:
             timer.start()
 
     def _schedule_image_cache_warm(self, image_url: str, referer: str, cache_key: str, delay_seconds: float = 6.0) -> None:
+        if _source_policy_url(image_url) or _source_policy_url(referer) or _source_policy_url(cache_key):
+            return
         """Cache a discovered cover only after the browser has had first dibs.
 
         The card UI downloads the remote image as soon as cover metadata arrives.
@@ -3077,7 +3291,7 @@ class Plugin:
         return ""
 
     def _google_decoder_opener(self) -> Any:
-        return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        return urllib.request.build_opener(_SourcePolicyRedirect(), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
     def _google_decoder_shell_sync(self, url: str, max_bytes: int, timeout: float, opener: Any = None) -> Tuple[bytes, str, str]:
         """Fetch a Google decoder shell without the feed-request consent cookie.
@@ -3095,7 +3309,7 @@ class Plugin:
                 "Cache-Control": "no-cache",
             },
         )
-        open_fn = opener.open if opener is not None else urllib.request.urlopen
+        open_fn = opener.open if opener is not None else _policy_urlopen
         with open_fn(request, timeout=timeout) as response:
             data = response.read(max_bytes + 1)
             if len(data) > max_bytes:
@@ -3338,6 +3552,8 @@ class Plugin:
                     event.set()
 
     def _apply_cached_item_enrichment(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        if self._source_policy(item):
+            return self._policy_item(item)
         """Apply already-cached URL/image data without doing network work.
 
         This runs on the hot get_news path so returning to a tab can paint cached
@@ -3650,6 +3866,8 @@ class Plugin:
         return best if best_score >= 0.88 and best_score - second_score >= 0.10 else ""
 
     def _enrich_one_image_sync(self, item: Dict[str, Any], allow_rendered_fallback: bool = False) -> Tuple[str, str, str]:
+        if self._source_policy(item):
+            return str(item.get("id") or ""), "", ""
         article_id = str(item.get("id") or "")
         target = str(item.get("url") or "").strip()
         supplied_image = str(item.get("image") or "").strip()
@@ -3746,6 +3964,8 @@ class Plugin:
         return article_id, image, resolved
 
     def _should_rendered_cover_fallback(self, item: Dict[str, Any], resolved_hint: str = "") -> bool:
+        if self._source_policy(item) or _source_policy_url(resolved_hint):
+            return False
         """Allow a strict article-specific rendered fallback only where it helps.
 
         We never use fuzzy rendered-homepage guessing here. A Google-backed story
@@ -3763,6 +3983,8 @@ class Plugin:
         return _is_google_news_url(target) and bool(resolved) and not _is_google_news_url(resolved)
 
     def _rendered_cover_only_sync(self, item: Dict[str, Any], resolved_hint: str = "") -> Tuple[str, str, str]:
+        if self._source_policy(item):
+            return str(item.get("id") or ""), "", ""
         """Rendered/Jina cover fallback without repeating the fast HTML request.
 
         The fast worker already attempted Google decoding + publisher metadata.
@@ -3845,7 +4067,7 @@ class Plugin:
 
     def _start_cover_enrichment_sync(self, items: List[Dict[str, Any]], rendered_limit: int = 0, background: bool = False) -> Dict[str, Any]:
         """Start finite concurrent cover discovery with a bounded strict slow lane."""
-        safe = [item for item in (items or []) if isinstance(item, dict) and str(item.get("url") or "").startswith(("http://", "https://"))]
+        safe = [item for item in (items or []) if isinstance(item, dict) and not self._source_policy(item) and str(item.get("url") or "").startswith(("http://", "https://"))]
         queued: List[Tuple[Dict[str, Any], str]] = []
         for item in safe:
             article_id = str(item.get("id") or "").strip()
@@ -3956,7 +4178,7 @@ class Plugin:
         with self._cover_inflight_lock:
             inflight = set(self._cover_inflight)
         for item in (items or []):
-            if not isinstance(item, dict):
+            if not isinstance(item, dict) or self._source_policy(item):
                 continue
             article_id = str(item.get("id") or "").strip()
             if not article_id:
@@ -3979,7 +4201,7 @@ class Plugin:
         return {"ok": True, "images": images, "resolvedUrls": resolved_urls, "pending": pending, "unavailable": []}
 
     def _enrich_images_sync(self, items: List[Dict[str, Any]], limit: int = 40) -> Dict[str, Any]:
-        safe = [item for item in (items or []) if isinstance(item, dict) and str(item.get("url") or "").startswith(("http://", "https://"))]
+        safe = [item for item in (items or []) if isinstance(item, dict) and not self._source_policy(item) and str(item.get("url") or "").startswith(("http://", "https://"))]
         requested = max(0, min(int(limit or 40), 160))
         # Feed-provided images are cheap to cache. Missing covers need article-page
         # extraction, so prioritize them but allow a full QAM refresh to warm many
@@ -4018,7 +4240,7 @@ class Plugin:
                 "Upgrade-Insecure-Requests": "1",
             })
         request = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _policy_urlopen(request, timeout=timeout) as response:
             data = response.read(max_bytes + 1)
             if len(data) > max_bytes:
                 data = data[:max_bytes]
@@ -4042,6 +4264,10 @@ class Plugin:
         return b"<rss" in head or b"<feed" in head or b"<rdf:rdf" in head
 
     def _discover_source_sync(self, url: str, country: str, preferred_name: str = "") -> Dict[str, Any]:
+        policy = _source_policy_url(url if re.match(r"^https?://", str(url or ""), re.I) else "https://" + str(url or ""))
+        if policy:
+            return {"ok": False, "errorCode": "source_pending_review" if policy["state"] != "approved" else "source_metadata_only",
+                    "error": "This source requires an approved feed and publisher display conditions before activation."}
         value = str(url or "").strip()
         if not value:
             return {"ok": False, "error": "Inserisci l'indirizzo del sito o del feed."}
@@ -4156,18 +4382,77 @@ class Plugin:
     def _feed_cache_path(self, source_id: str) -> Path:
         return CACHE_DIR / f"feed-{re.sub(r'[^A-Za-z0-9_-]+', '_', source_id)}.json"
 
-    def _read_feed_cache(self, source_id: str) -> Dict[str, Any]:
-        payload = _load_json(self._feed_cache_path(source_id), {})
+    def _read_feed_cache(self, source_id: str, source: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        source = source or {"sourceId": source_id}
+        policy = self._source_policy(source)
+        path = self._feed_cache_path(source_id)
+        payload = _load_json(path, {})
+        if policy and isinstance(payload, dict):
+            for item in payload.get("items", []):
+                if isinstance(item, dict):
+                    self._purge_policy_item_cache({**item, "sourceId": source_id})
         if not isinstance(payload, dict) or int(payload.get("cacheVersion") or 0) != FEED_CACHE_VERSION:
+            if policy:
+                path.unlink(missing_ok=True)
             return {}
-        return payload
+        if policy:
+            age = int(time.time()) - int(payload.get("fetchedAt") or 0)
+            if (not _policy_feed_allowed(policy, str(source.get("feedUrl") or next((s.get("feedUrl") for s in self._config.get("sources", []) if s.get("id") == source_id), "")))
+                    or payload.get("policyId") != policy["id"] or payload.get("policyVersion") != policy["version"]
+                    or age < 0 or age >= int(policy.get("cacheSeconds") or 0)):
+                path.unlink(missing_ok=True)
+                return {}
+        safe = self._policy_payload(payload)
+        if policy:
+            safe = {key: safe[key] for key in ("fetchedAt", "items", "policyId", "policyVersion", "cacheVersion") if key in safe}
+        if safe != payload:
+            _atomic_json(path, safe)
+        return safe
 
-    def _write_feed_cache(self, source_id: str, payload: Dict[str, Any]) -> None:
-        value = dict(payload or {})
+    def _write_feed_cache(self, source_id: str, payload: Dict[str, Any], source: Optional[Dict[str, Any]] = None) -> None:
+        policy = self._source_policy(source or {"sourceId": source_id})
+        if policy and not _policy_feed_allowed(policy, str((source or {}).get("feedUrl") or next((s.get("feedUrl") for s in self._config.get("sources", []) if s.get("id") == source_id), ""))):
+            return
+        value = self._policy_payload(payload)
+        if policy:
+            value = {"fetchedAt": value.get("fetchedAt", int(time.time())), "items": value.get("items", []),
+                     "policyId": policy["id"], "policyVersion": policy["version"]}
         value["cacheVersion"] = FEED_CACHE_VERSION
         _atomic_json(self._feed_cache_path(source_id), value)
 
+    def _purge_policy_item_cache(self, item: Dict[str, Any]) -> None:
+        """Delete only plugin-owned cache names proven by this restricted item."""
+        for key in ("url", "resolvedUrl"):
+            url = str(item.get(key) or "")
+            if not url or not self._source_policy(item):
+                continue
+            self._article_cache_path(url).unlink(missing_ok=True)
+            image_index = _load_json(self._image_cache_path(url), {})
+            self._image_cache_path(url).unlink(missing_ok=True)
+            filename = str(image_index.get("cachedFile") or "") if isinstance(image_index, dict) else ""
+            if re.fullmatch(r"[0-9a-f]{40}\.(?:jpe?g|png|webp|gif|avif)", filename):
+                (IMAGE_CACHE_DIR / filename).unlink(missing_ok=True)
+
+    def _parse_metadata_feed(self, source: Dict[str, Any], data: bytes, final_url: str, policy: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if not _policy_feed_allowed(policy, final_url or str(source.get("feedUrl") or "")):
+            return []
+        result = []
+        for node in _metadata_feed_items(data):
+            title = _clean_text(_item_text(node, ["title"]))
+            link = next((str(row.get("href") or "") for row in node["links"]), "") or _item_text(node, ["link"])
+            link = _absolute(final_url, link)
+            published = _item_text(node, ["pubdate", "published", "date", "updated"])
+            excerpt = _clean_text(_item_text(node, ["description", "summary"]))
+            safe = self._policy_item({"title": title, "url": link, "sourceId": str(source.get("id") or ""),
+                "country": str(source.get("country") or ""), "published": _parse_date(published), "publishedText": published, "excerpt": excerpt})
+            if safe:
+                result.append(safe)
+        return result
+
     def _parse_feed(self, source: Dict[str, Any], data: bytes, final_url: str) -> List[Dict[str, Any]]:
+        policy = self._source_policy(source)
+        if policy:
+            return self._parse_metadata_feed(source, data, final_url, policy)
         parsed = _parse_feed_document(data)
         source_id = str(source.get("id") or "")
         source_name = str(source.get("name") or "Fonte")
@@ -4271,6 +4556,9 @@ class Plugin:
         return result
 
     def _localize_source_assets_sync(self, source: Dict[str, Any]) -> Dict[str, Any]:
+        policy = self._source_policy(source)
+        if policy:
+            return self._policy_source(source, policy)
         """Persist source favicon/logo locally so QAM branding cannot disappear
         after route transitions or transient remote favicon failures."""
         localized = dict(source)
@@ -4328,17 +4616,27 @@ class Plugin:
                 finished.set()
 
     def _fetch_source_actual_sync(self, source: Dict[str, Any], force: bool, refresh_seconds: int) -> Dict[str, Any]:
+        policy = self._source_policy(source)
+        if policy and not _policy_feed_allowed(policy, str(source.get("feedUrl") or "")):
+            self._read_feed_cache(str(source.get("id") or ""), source)
+            return {"source": self._policy_source(source, policy), "items": [], "cached": False,
+                    "error": "source_pending_review" if policy["state"] != "approved" else "source_metadata_only"}
         # CRITICAL HOT PATH: never perform source-logo/favicon network I/O here.
         # Feed cache must be checked first and cached news must return immediately.
         source = self._normalized_source(source)
         source_id = str(source.get("id") or "")
         feed_url = str(source.get("feedUrl") or "")
-        cached = self._read_feed_cache(source_id)
+        cached = self._read_feed_cache(source_id, source)
         now = int(time.time())
         if not force and cached and now - int(cached.get("fetchedAt") or 0) < refresh_seconds:
             cached_items = []
             for raw_item in list(cached.get("items") or []):
                 if not isinstance(raw_item, dict):
+                    continue
+                if policy:
+                    safe_item = self._policy_item(raw_item)
+                    if safe_item:
+                        cached_items.append(safe_item)
                     continue
                 cached_items.append({
                     **raw_item,
@@ -4379,9 +4677,11 @@ class Plugin:
             if not items and str(source.get("siteUrl") or ""):
                 raise RuntimeError("Il feed non ha restituito notizie utilizzabili.")
             payload = {"fetchedAt": now, "items": items}
-            self._write_feed_cache(source_id, payload)
+            self._write_feed_cache(source_id, payload, source)
             return {"source": source, "items": items, "cached": False, "error": ""}
         except Exception as exc:
+            if policy:
+                return {"source": source, "items": list(cached.get("items") or []), "cached": bool(cached), "error": str(exc)}
             fallback_feed = _google_news_site_feed(str(source.get("siteUrl") or ""), str(source.get("country") or "IT"))
             if fallback_feed and fallback_feed != feed_url:
                 try:
@@ -4390,7 +4690,7 @@ class Plugin:
                     items = self._parse_feed(fallback_source, data, final_url)
                     if items:
                         payload = {"fetchedAt": now, "items": items}
-                        self._write_feed_cache(source_id, payload)
+                        self._write_feed_cache(source_id, payload, source)
                         self._log(f"feed fallback {source.get('name') or source_id}: native={_hostname(feed_url)} -> google items={len(items)} covers={sum(1 for item in items if str(item.get('image') or '').strip())}/{len(items)}")
                         if _hostname(str(source.get("siteUrl") or "")) == "ilpost.it":
                             try:
@@ -4443,12 +4743,7 @@ class Plugin:
             if not key or key in seen:
                 continue
             seen.add(key)
-            item["categories"] = _categorize_item(
-                str(item.get("title") or ""),
-                str(item.get("excerpt") or ""),
-                str(item.get("url") or ""),
-                item.get("feedCategories") if isinstance(item.get("feedCategories"), list) else [],
-            )
+            item["categories"] = self._policy_categories(item)
             if category and category != "all" and category not in set(str(value) for value in item.get("categories", [])):
                 continue
             items.append(self._apply_cached_item_enrichment(item))
@@ -4481,12 +4776,7 @@ class Plugin:
             key = str(item.get("url") or item.get("id") or item.get("title") or "")
             if not key or key in unique:
                 continue
-            item["categories"] = _categorize_item(
-                str(item.get("title") or ""),
-                str(item.get("excerpt") or ""),
-                str(item.get("url") or ""),
-                item.get("feedCategories") if isinstance(item.get("feedCategories"), list) else [],
-            )
+            item["categories"] = self._policy_categories(item)
             if category and category != "all" and category not in set(str(value) for value in item.get("categories", [])):
                 continue
             unique[key] = item
@@ -4516,10 +4806,7 @@ class Plugin:
             if not key or key in unique:
                 continue
             item = dict(item)
-            item["categories"] = _categorize_item(
-                str(item.get("title") or ""), str(item.get("excerpt") or ""), str(item.get("url") or ""),
-                item.get("feedCategories") if isinstance(item.get("feedCategories"), list) else [],
-            )
+            item["categories"] = self._policy_categories(item)
             unique[key] = self._apply_cached_item_enrichment(item)
         all_items = list(unique.values())
         all_items.sort(key=lambda item: (int(item.get("published") or 0), str(item.get("title") or "")), reverse=True)
@@ -4606,10 +4893,7 @@ class Plugin:
                     key = str(item.get("url") or item.get("id") or item.get("title") or "")
                     if not key or key in unique:
                         continue
-                    item["categories"] = _categorize_item(
-                        str(item.get("title") or ""), str(item.get("excerpt") or ""), str(item.get("url") or ""),
-                        item.get("feedCategories") if isinstance(item.get("feedCategories"), list) else [],
-                    )
+                    item["categories"] = self._policy_categories(item)
                     if category and category != "all" and category not in set(str(value) for value in item.get("categories", [])):
                         continue
                     unique[key] = self._apply_cached_item_enrichment(item)
@@ -4653,6 +4937,10 @@ class Plugin:
         return CACHE_DIR / f"article-{hashlib.sha1(str(article_url or '').encode('utf-8', 'ignore')).hexdigest()[:24]}.json"
 
     def _read_article_cache(self, article_url: str) -> Dict[str, Any]:
+        if _source_policy_url(article_url):
+            self._article_cache_path(article_url).unlink(missing_ok=True)
+            self._read_image_cache(article_url)
+            return {}
         payload = _load_json(self._article_cache_path(article_url), {})
         if not isinstance(payload, dict) or int(payload.get("cacheVersion") or 0) != ARTICLE_CACHE_VERSION:
             return {}
@@ -4668,6 +4956,8 @@ class Plugin:
         return result
 
     def _write_article_cache(self, article_url: str, article: Dict[str, Any]) -> None:
+        if _source_policy_url(article_url) or self._source_policy(article):
+            return
         try:
             _atomic_json(self._article_cache_path(article_url), {"cacheVersion": ARTICLE_CACHE_VERSION, "fetchedAt": int(time.time()), "article": article})
         except Exception:
@@ -4688,12 +4978,18 @@ class Plugin:
         return ""
 
     def _localize_article_images_cached_only(self, article: Dict[str, Any]) -> Dict[str, Any]:
+        denied = self._policy_reader_denied(str(article.get("url") or ""), article)
+        if denied:
+            return denied
         """Rewrite article image URLs only when bytes are already in the persistent
         image cache. This function never touches the network, so reopening a cached
         article stays immediate even when a publisher is currently slow/offline.
         """
         result = dict(article)
         hero = str(result.get("hero") or "")
+        if _source_policy_url(hero):
+            hero = ""
+            result["hero"] = ""
         cached_hero = self._cached_local_image_for_remote(hero)
         if cached_hero:
             result["hero"] = cached_hero
@@ -4704,6 +5000,8 @@ class Plugin:
             copy = dict(block)
             if copy.get("type") == "image":
                 remote = str(copy.get("url") or "")
+                if _source_policy_url(remote):
+                    continue
                 cached = self._cached_local_image_for_remote(remote)
                 if cached:
                     copy["url"] = cached
@@ -4712,6 +5010,8 @@ class Plugin:
         return result
 
     def _warm_article_images_sync(self, article: Dict[str, Any], max_body_images: int = 16) -> None:
+        if self._source_policy(article):
+            return
         """Download article artwork after the Reader result has already been returned.
         This preserves hotlink compatibility for future opens without making the
         current article wait for every body image.
@@ -4741,6 +5041,8 @@ class Plugin:
                     pass
 
     def _extract_article_blocks_from_html(self, text: str, final_url: str) -> Tuple[List[Dict[str, str]], str]:
+        if _source_policy_url(final_url):
+            return [], ""
         """Extract the strongest readable region instead of blindly using the
         first <article>. Several news sites place teaser/related <article> nodes
         before the real story, which caused the short duplicated fragments seen
@@ -4793,6 +5095,9 @@ class Plugin:
         return best_blocks, script_text
 
     def _jina_reader_article_sync(self, article_url: str, timeout: float = JINA_READER_TIMEOUT) -> Dict[str, Any]:
+        denied = self._policy_reader_denied(article_url)
+        if denied:
+            return denied
         """Last-resort rendered-page extraction.
 
         Article Reader keeps the normal timeout. Cover enrichment can request a
@@ -4813,7 +5118,7 @@ class Plugin:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=max(2.0, float(timeout or JINA_READER_TIMEOUT))) as response:
+            with _policy_urlopen(request, timeout=max(2.0, float(timeout or JINA_READER_TIMEOUT))) as response:
                 payload = json.loads(response.read(MAX_ARTICLE_BYTES).decode("utf-8", "replace"))
         except Exception:
             return {}
@@ -4837,6 +5142,9 @@ class Plugin:
         }
 
     def _article_from_feed_content_sync(self, target: str, fallback: Dict[str, Any]) -> Dict[str, Any]:
+        denied = self._policy_reader_denied(target, fallback)
+        if denied:
+            return denied
         """Return a strong native RSS/Atom article body without touching the network.
 
         Some publishers include most or all of the story in content:encoded. The
@@ -4891,6 +5199,9 @@ class Plugin:
         return self._localize_article_images_cached_only(raw_result)
 
     def _article_sync(self, url: str, fallback: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        denied = self._policy_reader_denied(url, fallback)
+        if denied:
+            return denied
         target = str(url or "").strip()
         fallback = fallback or {}
         if not target:
@@ -5255,6 +5566,8 @@ class Plugin:
 
     async def cache_image(self, url: str = "", referer: str = "") -> Dict[str, Any]:
         value = str(url or "").strip()
+        if _source_policy_url(value) or _source_policy_url(str(referer or "")):
+            return {"ok": False, "url": "", "errorCode": "source_metadata_only"}
         if not value.startswith(("http://", "https://")):
             return {"ok": False, "url": ""}
         local, _filename = await asyncio.to_thread(self._cache_remote_image_sync, value, str(referer or ""))
@@ -5285,6 +5598,9 @@ class Plugin:
     async def save_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(config, dict):
             return {"ok": False, "error": "Configurazione non valida."}
+        for raw in config.get("sources", []):
+            if isinstance(raw, dict) and (policy := self._source_policy(raw)) and raw.get("enabled", True) and not _policy_feed_allowed(policy, str(raw.get("feedUrl") or raw.get("feed_url") or "")):
+                return {"ok": False, "errorCode": "source_pending_review", "error": "This source is awaiting publisher review and cannot be activated."}
         next_config = _default_config()
         next_config.update(self._config)
         next_config.update({key: value for key, value in config.items() if key in next_config})
@@ -5317,16 +5633,16 @@ class Plugin:
         return {"ok": True, "config": self._config}
 
     async def prefetch_tabs(self, active_tab_id: str = "", limit: int = 120) -> Dict[str, Any]:
-        return await asyncio.to_thread(self._prefetch_tabs_sync, str(active_tab_id or ""), int(limit or 120))
+        return self._policy_payload(await asyncio.to_thread(self._prefetch_tabs_sync, str(active_tab_id or ""), int(limit or 120)))
 
     async def get_news_source(self, tab_id: str = "", source_id: str = "", force: bool = False, limit: int = 80) -> Dict[str, Any]:
-        return await asyncio.to_thread(self._news_source_sync, tab_id, source_id, bool(force), int(limit or 80))
+        return self._policy_payload(await asyncio.to_thread(self._news_source_sync, tab_id, source_id, bool(force), int(limit or 80)))
 
     async def get_news(self, tab_id: str = "", force: bool = False, limit: int = 80) -> Dict[str, Any]:
-        return await asyncio.to_thread(self._news_sync, tab_id, bool(force), int(limit or 80))
+        return self._policy_payload(await asyncio.to_thread(self._news_sync, tab_id, bool(force), int(limit or 80)))
 
     async def refresh_all(self, limit: int = 120) -> Dict[str, Any]:
-        return await asyncio.to_thread(self._refresh_all_sync, int(limit or 120))
+        return self._policy_payload(await asyncio.to_thread(self._refresh_all_sync, int(limit or 120)))
 
     async def get_image_warm_status(self) -> Dict[str, Any]:
         future = self._image_warm_future

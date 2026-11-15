@@ -13,7 +13,8 @@
     "test:runtime": "python scripts/runtime_regression.py",
     "test:frontend": "node scripts/frontend-regression.mjs",
     "test:offline": "python scripts/offline_smoke.py",
-    "test": "npm run validate:translations && npm run test:runtime && npm run test:frontend && npm run test:offline"
+    "test": "npm run validate:translations && npm run test:runtime && npm run test:frontend && npm run test:offline && npm run test:source-policy",
+    "test:source-policy": "python scripts/source_policy_regression.py"
   },
   "license": "MIT",
   "dependencies": {
